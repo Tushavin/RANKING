@@ -1,0 +1,387 @@
+---
+title: "Медиана Кемени"
+author: "Тушавин В. А."
+date: "15 декабря 2015 г."
+output:
+  html_document:
+    keep_md: yes
+  word_document: default
+---
+
+### Расчет методом Шульце
+
+
+```{r}
+library(gtools)
+library(lpSolve)
+rm(list=ls())
+# Функция, определяющая силу самого сильного пути
+# по методу Шульце
+
+
+Schulze<-function(ranks) {
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  mtx<-matrix(data=0,nrow=n_candidates,ncol=n_candidates)
+  for(i in 1:n_voters)
+    for(j in 1:(n_candidates-1))
+      mtx[ranks[i,j]+1,ranks[i,c((j+1):n_candidates)]+1]<-mtx[ranks[i,j]+1,ranks[i,c((j+1):n_candidates)]+1]+1
+        
+  result<-matrix(data=0,nrow=n_candidates,ncol=n_candidates)
+  for(i in 1:n_candidates)
+    for(j in 1:n_candidates)
+      if(i!=j) result[i,j]<-ifelse(mtx[i,j] > mtx[j,i],mtx[i,j],0)
+  for(i in 1:n_candidates)
+    for(j in 1:n_candidates)
+      if(i!=j) for(k in 1:n_candidates)
+        if(i!=k & j !=k) result[j,k]<-max(result[j,k],
+                                          min(result[j,i],result[i,k]))
+    vec<-rep(0,n_candidates)
+    for(k in 1:nrow(z<-combinations(n_candidates,2))) {
+      i=z[k,1]
+      j=z[k,2]
+      if(result[i,j]>result[j,i]) 
+        vec[j]<-vec[j]+1
+      else if(result[i,j]<result[j,i])
+        vec[i]<-vec[i]+1
+    }
+    return(list(mtx=result,best_rank=order(vec)-1))
+} 
+```
+
+### Расчет методом Кемени-Янга
+
+```{r}
+# Нахождение расстояния между оценками
+kendall_tau<-function(rank.a,rank.b) {
+  tau<-0
+  n<-length(rank.a)
+  for(k in 1:ncol(z<-combn(n,2))) {
+    i=z[1,k]
+    j=z[2,k]
+    tau<-tau+(sign(rank.a[i]-rank.a[j]) == -sign(rank.b[i]-rank.b[j]))
+  } 
+  return(tau)
+}
+
+
+# Построение графа
+build_graph<-function(ranks) {
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  edge_weights<-matrix(0,nrow=n_candidates,ncol=n_candidates)
+  for(k in 1:ncol(z<-combn(n_candidates,2))) {
+    i=z[1,k]
+    j=z[2,k]
+    preference<-ranks[, i] - ranks[, j]
+    h.ij <- sum(preference < 0) 
+    h.ji <- sum(preference > 0)
+    if(h.ij > h.ji) edge_weights[i, j] <- h.ij - h.ji else if(h.ij < h.ji) edge_weights[j, i] <- h.ji - h.ij
+  }
+  return(edge_weights)
+}
+
+# Нахождение медианы Кемени посредством решения задачи ЛП
+rank_solve<-function(ranks) {
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  # Строим граф
+  edge_weights<-build_graph(ranks)
+  # Задаем параметры. 
+  # Коээфициенты при целевой функции
+  objective.in<- as.vector(t(edge_weights))
+  # Коэффициенты для каждой пары
+  pairwise_constraints <- matrix(0,
+                                 n_candidates * (n_candidates - 1) / 2, n_candidates ^ 2)
+  for(k in 1:nrow(z<-combinations(n_candidates,2))) {
+    i=z[k,1]
+    j=z[k,2] 
+    pairwise_constraints[k,c((i-1)*n_candidates+j,(j-1)*n_candidates+i)]<-1
+  }
+  # Коэффициенты для каждой тройки
+  triangle_constraints <-matrix(0,n_candidates *
+                                  (n_candidates - 1) *
+                                  (n_candidates - 2), n_candidates ^ 2)
+  
+  for(m in 1:nrow(z<-permutations(n_candidates,3))) {
+    i=z[m,1]
+    j=z[m,2]
+    k=z[m,3]
+    triangle_constraints[m,c((i-1)*n_candidates+j,(j-1)*n_candidates+k,(k-1)*n_candidates+i)]<-1
+  }
+  constraints<-rbind(pairwise_constraints,triangle_constraints)
+  constraint_rhs<-rep(1,nrow(pairwise_constraints)+nrow(triangle_constraints))
+  constraint_signs<-c(rep("==",nrow(pairwise_constraints)),rep(">=",nrow(triangle_constraints)))
+  z<-lp("min",objective.in, constraints, constraint_signs, constraint_rhs,all.int=T) 
+  x<-matrix(z$solution,nrow=n_candidates,ncol=n_candidates,byrow=T)
+  best_rank<-apply(x,1,sum)
+  tau<-sum(apply(ranks,1,function(x){kendall_tau(x,best_rank)}))
+  return(list(min_dist=tau,best_rank=best_rank))
+}
+
+
+# Нахождение медианы Кемени посредством полного перебора
+rankaggr_brute<-function(ranks) {
+  min_dist<-Inf
+  best_rank <-NA
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  data<-permutations(n_candidates,n_candidates)-1
+  for(k in 1:nrow(data)) {
+    dist<-sum(apply(ranks,1,function(x){kendall_tau(x,data[k,])}))
+    if (dist < min_dist) {
+      min_dist <- dist
+      best_rank <- data[k,]
+    }}
+  return(list(min_dist=min_dist,best_rank=best_rank))  
+}
+
+# Нахождение медианы Кемени посредством перебора из существующих вариантов
+rankaggr_brute_mod<-function(ranks) {
+  min_dist<-Inf
+  best_rank <-NA
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  for(i in 1:n_voters){
+    dist<-sum(apply(ranks,1,function(x){kendall_tau(x,ranks[i,])}))
+    if (dist < min_dist) {
+      min_dist <- dist
+      best_rank <- ranks[i,]
+    }
+  return(list(min_dist=min_dist,best_rank=best_rank))  
+}}
+
+```
+
+### Расчет методом Борда
+
+```{r}
+# Нахождение результата методом Борда
+Borda<-function(ranks,mthd=1) {
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  if(mthd==1) 
+    x<-apply(n_candidates-ranks,2,sum)
+  else if (mthd==2)
+    x<-apply(n_candidates-ranks-1,2,sum)
+  else
+    x<-apply((ranks+1)/n_candidates,2,sum)
+  best_rank=order(x,decreasing=T)-1
+  return(list(best_rank=best_rank,wgt=x[best_rank+1]))
+}
+
+```
+
+### Тестирование алгоритмов
+
+Для тестирования алгоритма использован пример из [статьи на Wikipedia](
+https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%A8%D1%83%D0%BB%D1%8C%D1%86%D0%B5)
+
+```{r test}
+
+# Вычисление тестового примера
+
+ranks<-matrix(c(rep(c(0,2,1,4,3),5),
+                rep(c(0,3,4,2,1),5),
+                rep(c(1,4,3,0,2),8),
+                rep(c(2,0,1,4,3),3),
+                rep(c(2,0,4,1,3),7),
+                rep(c(2,1,0,3,4),2),
+                rep(c(3,2,4,1,0),7),
+                rep(c(4,1,0,3,2),8)),byrow=T,ncol=5)
+
+rankaggr_brute(ranks)
+rankaggr_brute_mod(ranks)
+rank_solve(ranks)
+Borda(ranks,1)
+Borda(ranks,2)
+Borda(ranks,3)
+Schulze(ranks)
+
+#  Тест по времени
+set.seed(1968)
+d.len<-c()
+d.n<-c()
+d.mth<-c()
+d.time<-c()
+
+for(rank_len in 3:15)
+  for(n_ranks in c(5,10,15,20)) {
+    ranks<-c()
+    for(i in 1:n_ranks) ranks<-c(ranks,sample(1:rank_len,rank_len))
+    ranks<-matrix(ranks,ncol=rank_len,byrow=T)-1
+    
+    if(rank_len<8) { # Дальше полный перебор идет слишком долго
+    start.time <- Sys.time()
+    z<-rankaggr_brute(ranks)
+    end.time <- Sys.time()
+    time.taken <-end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Кемени (ПП)")
+    d.time<-c(d.time,as.numeric(time.taken))
+    }
+    
+     start.time <- Sys.time()
+    z<-rankaggr_brute_mod(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Кемени (МП)")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-rank_solve(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Кемени (ЛП)")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-Borda(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Борда")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-Schulze(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Шульце")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+  }
+
+library(ggplot2)
+library(scales)
+mydata<-data.frame(Показателей=d.len,Экспертов=d.n,Время=d.time,Метод=d.mth)
+mydata$Экспертов<-as.factor(mydata$Экспертов)
+mydata$Метод<-as.factor(mydata$Метод)
+g<-ggplot(aggregate(Время~Показателей+Метод,data=mydata,mean),aes(x=Показателей,y=Время,linetype=Метод,col=Метод))+
+  geom_point()+
+  geom_line(size=1)+
+  scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
+                labels=trans_format("log10",math_format(10^.x)),
+                minor_breaks=log10(5)+-4:1)+
+  xlab("Количество оцениваемых показателей")+ylab("Время расчета, сек.")
+g<-g+theme_bw(base_size = 16)
+g+theme(legend.position=c(1,1),legend.justification=c(1,1))
+```
+
+## Решение практической задачи
+
+```{r}
+# Исходные данные
+mydata<-matrix(c(6.00,9.50,9.90,7.00,7.00,8.00,
+7.00,9.84,10.00,10.00,8.00,10.00,
+6.00,10.00,10.00,6.00,8.00,10.00,
+6.00,10.00,9.50,7.00,8.00,9.00,
+6.89,9.59,10.00,6.00,7.00,8.00,
+7.00,10.00,10.00,8.00,6.00,9.00,
+6.00,9.10,10.00,8.00,5.00,8.00,
+7.50,9.81,10.00,9.00,9.00,7.00),byrow=T,ncol=6)
+mydata<-as.data.frame(mydata)
+names(mydata)<-paste0("Q",1:6)
+mydata$Qm<-apply(mydata,1,mean)
+knitr::kable(mydata,digits =2)
+```
+
+Функция преобразования шкал и преобразование
+
+```{r}
+convert.scale<-function(bad,good,val) {
+  x1=bad
+  x2=good
+  x3=2*good-bad
+  y1=0
+  y2=1
+  y3=0
+  a<-(y3-(x3*(y2-y1)+x2*y1-x1*y2)/(x2-x1))/(x3*(x3-x1-x2)+x1*x2)
+  b<-(y2-y1)/(x2-x1)-a*(x1+x2)
+  c<-(x2*y1-x1*y2)/(x2-x1)+a*x1*x2
+  y=a*val*val+b*val+c
+  return(ifelse(y>0,y,0))
+}
+
+for(i in 1:nrow(mydata)) for (j in 1:(ncol(mydata)-1))
+        mydata[i,j]<-convert.scale(1,10,mydata[i,j])
+mydata$Qm<-apply(mydata,1,mean)
+knitr::kable(mydata,digits=4)
+```
+
+Функция генерации случайных весов
+
+```{r}
+set.seed(2014)
+library(gtools)
+rpoly<-function(n=1, size=2,test=data.frame()) {
+  mtx<-rdirichlet(n,rep(1,size))
+  if(length(test)==0) return(mtx) 
+  for(j in 1:n) {
+    while(TRUE) {
+     flag=TRUE
+      for(i in 1:nrow(test)) {
+      if(mtx[j,test$master[i]]<mtx[j,test$slave[i]]) {
+        tmp<-mtx[j,test$slave[i]]
+        mtx[j,test$slave[i]]<-mtx[j,test$master[i]]
+        mtx[j,test$master[i]]<-tmp
+        flag=FALSE
+      }
+
+      }
+   if(flag) break
+  }
+}
+return(mtx)
+}
+
+```
+
+Генерация случайных весов с учетом ограничения:
+P5>P1, P5>P2, P5>P3, P5>P4; P2>P1, P2>P3, P2>P4; P1>P3, P1>P4
+
+
+```{r}
+mtx<-rpoly(1000, 5, data.frame(master=c(5,5,5,5,2,2,2,1,1),slave=c(1,2,3,4,1,3,4,3,4)))
+knitr::kable(summary(mtx))
+```
+
+Рассчитаем матрицу рангов 
+
+
+```{r}
+mtx.new<-matrix(0,nrow=1000,ncol=6)
+for(i in 1:6){
+  mtx.new[,i]<-apply(mtx,1,FUN=function(x) sum(x*mydata[i,1:6]))
+  
+}
+library(foreach)
+ranks<-foreach(i=1:1000, .combine='rbind') %do% order(mtx.new[i,],decreasing =T)-1
+knitr::kable(head(ranks),col.names =paste0("X",1:6))
+```
+
+Расчет методом Шульце и медианы Кемени
+
+```{r}
+rank_solve(ranks)
+Schulze(ranks)
+
+```
+
+Информация о параметрах R
+
+```{r}
+sessionInfo()
+```
+
+
+
+
