@@ -156,12 +156,14 @@ rankaggr_brute_mod<-function(ranks) {
 Borda<-function(ranks,mthd=1) {
   n_voters<-nrow(ranks)
   n_candidates<-ncol(ranks)
+  idx<-n_candidates:1
+  ord<-t(apply(ranks,1,function(val) val[idx]))
   if(mthd==1) 
-    x<-apply(n_candidates-ranks,2,sum)
+    x<-apply(ord,2,sum)
   else if (mthd==2)
-    x<-apply(n_candidates-ranks-1,2,sum)
+    x<-apply(ord-1,2,sum)
   else
-    x<-apply((ranks+1)/n_candidates,2,sum)
+    x<-apply((ord+1)/n_candidates,2,sum)
   best_rank=order(x,decreasing=T)-1
   return(list(best_rank=best_rank,wgt=x[best_rank+1]))
 }
@@ -226,10 +228,10 @@ Borda(ranks,1)
 
 ```
 ## $best_rank
-## [1] 1 0 3 4 2
+## [1] 2 0 1 4 3
 ## 
 ## $wgt
-## [1] 144 140 139 135 117
+## [1] 108  90  86  85  81
 ```
 
 ```r
@@ -238,10 +240,10 @@ Borda(ranks,2)
 
 ```
 ## $best_rank
-## [1] 1 0 3 4 2
+## [1] 2 0 1 4 3
 ## 
 ## $wgt
-## [1] 99 95 94 90 72
+## [1] 63 45 41 40 36
 ```
 
 ```r
@@ -250,7 +252,7 @@ Borda(ranks,3)
 
 ```
 ## $best_rank
-## [1] 2 4 3 0 1
+## [1] 2 0 1 4 3
 ## 
 ## $wgt
 ## [1] 30.6 27.0 26.2 26.0 25.2
@@ -473,8 +475,8 @@ knitr::kable(summary(mtx))
 
 
 ```r
-mtx.new<-matrix(0,nrow=1000,ncol=6)
-for(i in 1:6){
+mtx.new<-matrix(0,nrow=1000,ncol=8)
+for(i in 1:8){
   mtx.new[,i]<-apply(mtx,1,FUN=function(x) sum(x*mydata[i,1:6]))
   
 }
@@ -487,50 +489,95 @@ library(foreach)
 
 ```r
 ranks<-foreach(i=1:1000, .combine='rbind') %do% order(mtx.new[i,],decreasing =T)-1
-knitr::kable(head(ranks),col.names =paste0("X",1:6))
+knitr::kable(head(ranks),col.names =paste0("X",1:8))
 ```
 
-            X1   X2   X3   X4   X5   X6
----------  ---  ---  ---  ---  ---  ---
-result.1     1    3    2    4    0    5
-result.2     1    3    2    4    0    5
-result.3     1    3    2    4    0    5
-result.4     1    3    2    4    5    0
-result.5     1    3    2    4    0    5
-result.6     1    3    2    4    0    5
+            X1   X2   X3   X4   X5   X6   X7   X8
+---------  ---  ---  ---  ---  ---  ---  ---  ---
+result.1     7    1    3    2    4    0    5    6
+result.2     7    1    3    2    4    0    5    6
+result.3     7    1    3    2    4    0    5    6
+result.4     1    7    3    2    4    5    0    6
+result.5     7    1    3    2    4    0    5    6
+result.6     7    1    3    2    4    0    5    6
+
+Определение коэффициента конкордации
+
+
+```r
+library(irr)
+kendall(t(ranks))
+```
+
+```
+##  Kendall's coefficient of concordance W
+## 
+##  Subjects = 8 
+##    Raters = 1000 
+##         W = 0.37 
+## 
+##  Chisq(7) = 2592 
+##   p-value = 0
+```
+
+Таким образом, дальнейшее вычисление имеет смысл.
 
 Расчет методом Шульце и медианы Кемени
 
 
 ```r
-rank_solve(ranks)
+(x1<-rank_solve(ranks))
 ```
 
 ```
 ## $min_dist
-## [1] 2377
+## [1] 6163
 ## 
 ## $best_rank
-## [1] 1 3 2 4 0 5
+## [1] 7 1 3 2 4 0 5 6
 ```
 
 ```r
-Schulze(ranks)
+(x2<-Schulze(ranks))
 ```
 
 ```
 ## $mtx
-##      [,1] [,2] [,3] [,4] [,5] [,6]
-## [1,]    0    0    0    0    0  766
-## [2,] 1000    0 1000 1000 1000 1000
-## [3,] 1000    0    0    0 1000  982
-## [4,] 1000    0  882    0 1000 1000
-## [5,]  918    0    0    0    0  889
-## [6,]    0    0    0    0    0    0
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+## [1,]    0    0    0    0    0  766 1000    0
+## [2,] 1000    0 1000 1000 1000 1000 1000    0
+## [3,] 1000    0    0    0 1000  982 1000    0
+## [4,] 1000    0  882    0 1000 1000 1000    0
+## [5,]  918    0    0    0    0  889 1000    0
+## [6,]    0    0    0    0    0    0 1000    0
+## [7,]    0    0    0    0    0    0    0    0
+## [8,] 1000  616 1000 1000 1000 1000 1000    0
 ## 
 ## $best_rank
-## [1] 1 3 2 4 0 5
+## [1] 7 1 3 2 4 0 5 6
 ```
+
+Результат
+
+
+```r
+z<-paste0("Q",1:8)
+cat("Результат по медиане Кемени :", z[x1$best_rank+1],"\n")
+```
+
+```
+## Результат по медиане Кемени : Q8 Q2 Q4 Q3 Q5 Q1 Q6 Q7
+```
+
+```r
+cat("Результат методом Шульце :", z[x2$best_rank+1],"\n")
+```
+
+```
+## Результат методом Шульце : Q8 Q2 Q4 Q3 Q5 Q1 Q6 Q7
+```
+
+
 
 Информация о параметрах R
 
@@ -553,8 +600,8 @@ sessionInfo()
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-## [1] foreach_1.4.3  scales_0.3.0   ggplot2_1.0.1  lpSolve_5.6.13
-## [5] gtools_3.5.0  
+## [1] irr_0.84       foreach_1.4.3  scales_0.3.0   ggplot2_1.0.1 
+## [5] lpSolve_5.6.13 gtools_3.5.0  
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] Rcpp_0.12.2      knitr_1.11       magrittr_1.5     MASS_7.3-45     

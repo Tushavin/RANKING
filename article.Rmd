@@ -160,12 +160,14 @@ rankaggr_brute_mod<-function(ranks) {
 Borda<-function(ranks,mthd=1) {
   n_voters<-nrow(ranks)
   n_candidates<-ncol(ranks)
+  idx<-n_candidates:1
+  ord<-t(apply(ranks,1,function(val) val[idx]))
   if(mthd==1) 
-    x<-apply(n_candidates-ranks,2,sum)
+    x<-apply(ord,2,sum)
   else if (mthd==2)
-    x<-apply(n_candidates-ranks-1,2,sum)
+    x<-apply(ord-1,2,sum)
   else
-    x<-apply((ranks+1)/n_candidates,2,sum)
+    x<-apply((ord+1)/n_candidates,2,sum)
   best_rank=order(x,decreasing=T)-1
   return(list(best_rank=best_rank,wgt=x[best_rank+1]))
 }
@@ -358,23 +360,42 @@ knitr::kable(summary(mtx))
 
 
 ```{r}
-mtx.new<-matrix(0,nrow=1000,ncol=6)
-for(i in 1:6){
+mtx.new<-matrix(0,nrow=1000,ncol=8)
+for(i in 1:8){
   mtx.new[,i]<-apply(mtx,1,FUN=function(x) sum(x*mydata[i,1:6]))
   
 }
 library(foreach)
 ranks<-foreach(i=1:1000, .combine='rbind') %do% order(mtx.new[i,],decreasing =T)-1
-knitr::kable(head(ranks),col.names =paste0("X",1:6))
+knitr::kable(head(ranks),col.names =paste0("X",1:8))
 ```
+
+Определение коэффициента конкордации
+
+```{r}
+library(irr)
+kendall(t(ranks))
+```
+
+Таким образом, дальнейшее вычисление имеет смысл.
 
 Расчет методом Шульце и медианы Кемени
 
 ```{r}
-rank_solve(ranks)
-Schulze(ranks)
+(x1<-rank_solve(ranks))
+(x2<-Schulze(ranks))
 
 ```
+
+Результат
+
+```{r}
+z<-paste0("Q",1:8)
+cat("Результат по медиане Кемени :", z[x1$best_rank+1],"\n")
+cat("Результат методом Шульце :", z[x2$best_rank+1],"\n")
+```
+
+
 
 Информация о параметрах R
 
