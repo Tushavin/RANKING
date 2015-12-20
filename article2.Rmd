@@ -1,0 +1,116 @@
+---
+title: "Методика визуализации потока обращений"
+author: "Тушавин В. А."
+date: "19 декабря 2015 г."
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+## Тестовый график
+
+```{r}
+x1<-cumsum((1:10)*2)
+z1<-diff(x1)
+x2<-cumsum((10:1)*2)
+z2<-diff(x2)
+par(mar=c(5,5,1,1))
+
+plot(z1[1:8],z1[2:9],xlim=c(1,20),ylim=c(1,20),xlab="Время до события",ylab="Время после события",cex.lab=1.2,cex.axis=1.2)
+points(z2[1:8],z2[2:9],pch=19)
+abline(a=0,b=1,lty=2)
+```
+
+## Рисунки для полных данных
+
+```{r warning=FALSE}
+library(ggplot2)
+library(scales)
+library("readxl")
+xls.data<-read_excel("datafile.xlsx")
+dim(xls.data)
+summary(xls.data)
+mydata<-xls.data[,c(1,3,9,15)]
+mydata[is.na(mydata[,2]),2]<-0
+mydata[is.na(mydata[,3]),3]<-0
+mydata[,3]<-as.factor(mydata[,3])
+max.idx<-nrow(mydata)
+
+dim(mydata)
+summary(mydata)
+head(mydata)
+mydata<-mydata[order(mydata$created),]
+lag<-as.numeric(diff(mydata$created))
+graph<-data.frame(x=lag[1:(max.idx-2)],y=lag[2:(max.idx-1)], hour=as.numeric(format(mydata$created[2:(max.idx-1)],"%H")),
+wd=as.numeric(format(mydata$created[2:(max.idx-1)],"%u")))
+
+ggplot(graph,aes(x=1,y=x))+geom_violin()+
+  geom_boxplot(width=0.1,fill="black")+
+  theme(axis.title.x=element_blank())+
+  scale_y_log10(breaks=c(1,60,3600,3600*24),labels=c("1 cек.","1 мин.", "1 час", "1 сутки"))+
+  stat_summary(fun.y=median,geom="point",fill="white",shape=21,size=2.5)+
+  scale_x_continuous(breaks=NULL)+
+  labs(x="",y="Интервал до обращения")+
+  theme_bw(base_size = 18) 
+
+g<-ggplot(graph,aes(x=x,y=y,col=as.factor(hour)))+
+  geom_point()+
+  scale_x_log10(breaks=c(1,60,3600,3600*24),
+                labels=c("1 cек.","1 мин.", "1 час", "1 сутки"))+
+  scale_y_log10(breaks=c(1,60,3600,3600*24),
+                labels=c("1 cек.","1 мин.", "1 час", "1 сутки"))+
+  stat_density2d(col="black")+
+  scale_color_discrete(name = "Час суток")+
+  labs(x="Интервал до обращения",y="Интервал после обращения")
+g+theme_bw(base_size = 18)  #+theme(legend.position='none')
+median(graph$x)
+median(graph$y)
+mean(graph$x)
+sd(graph$x)
+mean(graph$y)
+sd(graph$y)
+```
+
+```{r}
+UCL<-function(x,alpha=0.05) log(alpha/2)/log(1-1/x)-1
+LCL<-function(x,alpha=0.05) log(1-alpha/2)/log(1-1/x)
+
+```
+
+## Проверка распределения
+
+```{r}
+library(ADGofTest)
+test<-subset(graph,wd>1 & wd<6 & hour>11 & hour<15)
+dim(test)
+mean(test$x)
+sd(test$x)
+set.seed(2015)
+z<-sample(test$x,50)  
+print(ad.test(z,pgeom,1/mean(test$x)))
+LCL(mean(test$x))
+UCL(mean(test$x))
+```
+
+## Рисунок для выборки
+```{r}
+g<-ggplot(test,aes(x=x,y=y))+
+  geom_point(col="grey")+
+  scale_x_log10(breaks=c(1,60,3600,3600*24),
+                labels=c("1 cек.","1 мин.",  "1 час", "1 сутки"))+
+  scale_y_log10(breaks=c(1,60,3600,3600*24),
+                labels=c("1 cек.","1 мин.", "1 час", "1 сутки"))+
+  stat_density2d(col="black")+
+  geom_hline(aes(yintercept=c(LCL(mean(test$x)),UCL(mean(test$x)))))+
+  geom_vline(aes(xintercept=c(LCL(mean(test$x)),UCL(mean(test$x)))))+
+  labs(x="Интервал до обращения",y="Интервал после обращения") 
+g+theme_bw(base_size = 18)
+
+```
+
+### Информация о параметрах R
+
+```{r}
+sessionInfo()
+```
+
