@@ -25,7 +25,7 @@ abline(a=0,b=1,lty=2)
 ```r
 library(ggplot2)
 library(scales)
-library("readxl")
+library(readxl)
 xls.data<-read_excel("datafile.xlsx")
 dim(xls.data)
 ```
@@ -340,6 +340,25 @@ g+theme_bw(base_size = 18)
 ```
 
 ![](article2_files/figure-html/unnamed-chunk-5-1.png) 
+
+### Определение числа кластеров
+
+
+```r
+wssplot <- function(data, nc=15, seed=1234){
+               wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Число кластеров",
+                     ylab="Сумма квадратов для групп")}
+
+ktest<-scale(log(test[,1:2]+1))
+wssplot(ktest)
+```
+
+![](article2_files/figure-html/unnamed-chunk-6-1.png) 
+
 
 ### Информация о параметрах R
 
