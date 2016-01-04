@@ -1,0 +1,390 @@
+---
+title: "Сравнение подходов к ранжированию"
+author: "Тушавин В. А."
+date: "4 января 2016 г."
+output:
+  word_document: default
+  html_document:
+    keep_md: yes
+---
+
+Целью настоящего исследования является сравнение алгоритмов ранжирования объектов с точки зрения их эффективности.
+Сравниваются три алгоритма. Два из них были ранее описаны в статье Тушавин В. А. Ранжирование показателей качества с использованием методов Кемени-Янга и Шульце //Экономика и менеджмент систем управления. 2005. № 4.4.
+Третий - быстрый алгоритм нахождения медианы Кемени из пакета `ConsRank`.
+
+### Определение библиотек и функций
+
+```{r setup}
+library(gtools)
+library(ConsRank)
+library(lpSolve)
+library(irr)
+
+# Функции для нахождения медианы Кемени
+# Нахождение расстояния между оценками
+kendall_tau<-function(rank.a,rank.b) {
+  tau<-0
+  n<-length(rank.a)
+  for(k in 1:ncol(z<-combn(n,2))) {
+    i=z[1,k]
+    j=z[2,k]
+    tau<-tau+(sign(rank.a[i]-rank.a[j]) == -sign(rank.b[i]-rank.b[j]))
+  } 
+  return(tau)
+}
+
+
+# Построение графа
+build_graph<-function(ranks) {
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  edge_weights<-matrix(0,nrow=n_candidates,ncol=n_candidates)
+  for(k in 1:ncol(z<-combn(n_candidates,2))) {
+    i=z[1,k]
+    j=z[2,k]
+    preference<-ranks[, i] - ranks[, j]
+    h.ij <- sum(preference < 0) 
+    h.ji <- sum(preference > 0)
+    if(h.ij > h.ji) edge_weights[i, j] <- h.ij - h.ji else if(h.ij < h.ji) edge_weights[j, i] <- h.ji - h.ij
+  }
+  return(edge_weights)
+}
+
+# Нахождение медианы Кемени посредством решения задачи ЛП
+rank_solve<-function(ranks) {
+  tic = proc.time()[3]
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  # Строим граф
+  edge_weights<-build_graph(ranks)
+  # Задаем параметры. 
+  # Коээфициенты при целевой функции
+  objective.in<- as.vector(t(edge_weights))
+  # Коэффициенты для каждой пары
+  pairwise_constraints <- matrix(0,
+                                 n_candidates * (n_candidates - 1) / 2, n_candidates ^ 2)
+  for(k in 1:nrow(z<-combinations(n_candidates,2))) {
+    i=z[k,1]
+    j=z[k,2] 
+    pairwise_constraints[k,c((i-1)*n_candidates+j,(j-1)*n_candidates+i)]<-1
+  }
+  # Коэффициенты для каждой тройки
+  triangle_constraints <-matrix(0,n_candidates *
+                                  (n_candidates - 1) *
+                                  (n_candidates - 2), n_candidates ^ 2)
+  
+  for(m in 1:nrow(z<-permutations(n_candidates,3))) {
+    i=z[m,1]
+    j=z[m,2]
+    k=z[m,3]
+    triangle_constraints[m,c((i-1)*n_candidates+j,(j-1)*n_candidates+k,(k-1)*n_candidates+i)]<-1
+  }
+  constraints<-rbind(pairwise_constraints,triangle_constraints)
+  constraint_rhs<-rep(1,nrow(pairwise_constraints)+nrow(triangle_constraints))
+  constraint_signs<-c(rep("==",nrow(pairwise_constraints)),rep(">=",nrow(triangle_constraints)))
+  z<-lp("min",objective.in, constraints, constraint_signs, constraint_rhs,all.int=T) 
+  x<-matrix(z$solution,nrow=n_candidates,ncol=n_candidates,byrow=T)
+  best_rank<-apply(x,1,sum)
+  tau<-sum(apply(ranks,1,function(x){kendall_tau(x,best_rank)}))
+  toc = proc.time()[3]
+  eltime = toc - tic
+  Consensus=best_rank+1
+  names(Consensus)<-LETTERS[1:n_candidates]
+  return(list(min_dist=tau,best_rank=best_rank,Consensus=Consensus,Eltime=eltime))
+}
+```
+
+Поскольку предыдущая версия функции нахождения ранжирования методом Шульце требовала полное ранжирование заданное в виде последовательности номеров элементов, то необходимо её немного преобразовать для работы с таблицей рангов 
+
+```{r schile}
+# Модифицированния функция нахождения итогового
+# ранжирования методом Шульце
+Schulze.m<-function(ranks,Wk=NULL) {
+  tic = proc.time()[3]
+  if (class(ranks) == "data.frame") {
+    ranks = as.matrix(ranks)
+  }  
+  n_voters<-nrow(ranks)
+  n_candidates<-ncol(ranks)
+  ranks[is.na(ranks)]<-Inf
+  if (n_voters == 1) {
+    consensus = ranks
+  } else {
+    mtx<-matrix(data=0,nrow=n_candidates,ncol=n_candidates)
+    rownames(mtx)<-colnames(ranks)
+    colnames(mtx)<-colnames(ranks)
+    index<-combinations(n_candidates,2)
+    for(i in 1:n_voters){
+      temp<-matrix(data=0,nrow=n_candidates,ncol=n_candidates)
+      for(idx in 1:nrow(index)) {
+        x1=index[idx,1]
+        x2=index[idx,2]
+        if(ranks[i,x1]<ranks[i,x2]) temp[x1,x2]<-temp[x1,x2]+1
+        if(ranks[i,x1]>ranks[i,x2]) temp[x2,x1]<-temp[x2,x1]+1
+      }
+      if(!is.null(Wk)) temp<-temp*Wk[i]
+      mtx<-mtx+temp
+    }
+  result<-matrix(data=0,nrow=n_candidates,ncol=n_candidates)
+  for(i in 1:n_candidates)
+    for(j in 1:n_candidates)
+      if(i!=j) result[i,j]<-ifelse(mtx[i,j] > mtx[j,i],mtx[i,j],0)
+  for(i in 1:n_candidates)
+    for(j in 1:n_candidates)
+      if(i!=j) for(k in 1:n_candidates)
+        if(i!=k & j !=k) result[j,k]<-max(result[j,k],
+                                          min(result[j,i],result[i,k]))
+  vec<-rep(0,n_candidates)
+  for(k in 1:nrow(z<-combinations(n_candidates,2))) {
+    i=z[k,1]
+    j=z[k,2]
+    if(result[i,j]>result[j,i]) 
+      vec[j]<-vec[j]+1
+    else if(result[i,j]<result[j,i])
+      vec[i]<-vec[i]+1
+  }
+  } 
+  consensus<-matrix(vec,nrow=1,ncol=n_candidates)
+  colnames(consensus)<-colnames(ranks)
+toc = proc.time()[3]
+eltime = toc - tic
+return(list(Consensus=consensus+1,Eltime=eltime))
+}
+```
+
+Проведем тестирование на примере из Википедии
+
+```{r test.sh}
+test<-data.frame(order=c("ACBED","ADECB",
+                 "BEDAC",
+                 "CABED",
+                 "CAEBD",
+                 "CBADE",
+                 "DCEBA",
+                 "EBADC"),
+                  wk=c(5,5,8,3,7,2,7,8))  
+ranks<-matrix(0,nrow=nrow(test),ncol=5)
+colnames(ranks)<-LETTERS[1:5]
+for(i in 1:nrow(test)) 
+  ranks[i,t(asc(as.character(test$order[i]))-64)]<-1:5
+Wk<-test$wk
+Schulze.m(ranks,Wk)
+```
+
+Результаты свопали полностью. Функция работает.
+Проверим результат с помощью пакета `ConsRank`
+
+```{r test.fc}
+FASTcons(ranks,Wk)
+```
+
+Имеется расхождение, поскольку пример является несбалансированным по рангам.
+
+Сравним результаты тестового примера из пакета `ConsRank`
+
+```{r test.comp}
+data(sports)
+Schulze.m(sports)
+FASTcons(sports,maxiter=10)
+```
+
+Результаты удовлетворительны. 
+
+### Задание функций тестирования
+
+Пусть имеется матрица рангов n x m, где n - эксперты,  а m - ранжируемые показатели и имеется случайный вектор рангов длиной m. Пусть имеется полный конценсус и все эксперты поставили одинаковую оценку равную этому случайному вектору. Внесем искажения в матрицу, поменяв в каждой строке, кроме первой, два случайно выбранных рядом стоящих ранга местами. Попробуем отыскать исходное ранжирование с помощью метода Шульце, медианы Кемени методом ЛП и методом ветвей и границ.
+
+
+```{r setup.test}
+change<-function(vec,cnt=1) {
+  idx<-1:(length(vec)-1)
+  for(i in 1:cnt) {
+    k<-sample(idx,1)
+    x1<-which(vec==k)
+    x2<-which(vec==(k+1))
+    x<-vec[x1]
+    vec[x1]<-vec[x2]
+    vec[x2]<-x
+  }  
+  return(vec)
+}
+
+dotest<-function(val=5,experts=10,tests=1,correct=0) {
+  result<-list()
+  # Start
+  for(i in 1:tests) {
+    x0<-sample(1:val,val)
+    names(x0)<-LETTERS[1:val]
+    z<-matrix(rep(x0,experts),byrow=T,ncol=val)
+    colnames(z)<-LETTERS[1:val]
+    z1<-t(apply(z,1,change,cnt=1))
+    if(correct>0) for(j in 1:correct) z1[j,]<-x0
+    result[[i]]<-list(kendall=kendall(t(z1)),
+                      TrueValue=x0,
+                      Shulze=Schulze.m(z1),
+                      FASTcons=QuickCons(z1),
+                      LP=rank_solve(z1-1))
+  }
+return(result)
+}
+```
+
+### Тестирование
+
+```{r longcalc}
+if(!file.exists("doe.RDs")) { 
+  stop("Бля!")
+  set.seed(2015)
+  doe<-expand.grid(testn=1:100,val=3:8,experts=c(4,8,16,32,64,128,256,512))
+  doe$W<-NA
+  doe$Shulze.time<-NA
+  doe$FASTcons.time<-NA
+  doe$LP.time<-NA
+  doe$TS<-""
+  doe$Sch<-""
+  doe$Ken<-""
+  doe$LP<-""
+  doe$TrueS<-FALSE
+  doe$TrueF<-FALSE
+  doe$TrueLP<-FALSE
+  doe$SF<-FALSE
+  doe$SLP<-FALSE
+  doe$FLP<-FALSE
+  
+  pb <- txtProgressBar(min = 0, max = nrow(doe), style = 3,file = stderr())
+  for(i in 1:nrow(doe)) { 
+    r1<-dotest(val=doe$val[i],experts=doe$experts[i],tests=1,correct=1)
+    doe$W[i]<-r1[[1]]$kendall$value
+    doe$Shulze.time[i]<-r1[[1]]$Shulze$Eltime
+    doe$FASTcons.time[i]<-r1[[1]]$FASTcons$Eltime
+    doe$LP.time[i]<-r1[[1]]$LP$Eltime
+    
+    doe$TS[i]<-paste0(names(r1[[1]]$TrueValue)[order(r1[[1]]$TrueValue)],collapse="")
+    doe$Sch[i]<-paste0(names(r1[[1]]$Shulze$Consensus[1,])[order(r1[[1]]$Shulze$Consensus[1,])],collapse="")
+    doe$Ken[i]<-paste0(names(r1[[1]]$FASTcons$Consensus[1,])[order(r1[[1]]$FASTcons$Consensus[1,])],collapse="")
+    doe$LP[i]<-paste0(names(r1[[1]]$LP$Consensus)[order(r1[[1]]$LP$Consensus)],collapse="")
+    
+    doe$TrueS[i]<-(doe$TS[i] == doe$Sch[i])
+    doe$TrueF[i]<-(doe$TS[i] == doe$Ken[i])
+    doe$TrueLP[i]<-(doe$TS[i] == doe$LP[i])
+    doe$SF[i]<-(doe$Sch[i] == doe$Ken[i])
+    doe$SLP[i]<-(doe$Sch[i] == doe$LP[i])
+    doe$FLP[i]<-(doe$Ken[i] == doe$LP[i])
+    setTxtProgressBar(pb, i)
+  }
+  close(pb)
+  ### Сохранение данных
+  saveRDS(doe,"doe.RDs")
+  library(xlsx)
+  write.xlsx(doe, "mydata.xlsx", sheetName="Results",row.names=FALSE)
+} else doe<-readRDS("doe.RDs")
+  
+knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,FASTcons.time,LP.time)~val+experts,data=doe,sum))
+```
+
+### Время выполнения скрипта в зависимости от алгоритма
+
+```{r sc.time}
+library(ggplot2)
+library(reshape2)
+agg.doe<-agg.doe[,c(1,2,9:11)]
+names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
+md<-melt(agg.doe,id=c("val","experts"))
+ggplot(md,aes(x=val,y=value,fill=variable))+
+  geom_bar(stat="identity",colour="black")+
+  scale_fill_discrete(name = "Алгоритм")+
+  labs(x="Число параметров",y="Время, сек.")+
+  theme_bw()+theme(text=element_text(size=14))
+ggsave("Pic03_00.png",width=6,height=4,dpi=300)
+```
+
+
+### Построение диаграммы Венна
+
+```{r venn.first}
+library(VennDiagram)
+
+plot.venn<-function(doe) {
+  grid.newpage()
+  draw.quad.venn(area1 = nrow(doe), 
+                 area2 = nrow(doe),
+                 area3 = nrow(doe),
+                 area4=nrow(doe),
+                 n12 = sum(doe$SF),
+                 n13 = sum(doe$TrueS),
+                 n14 = sum(doe$SLP),
+                 n23 = sum(doe$TrueF),
+                 n24 = sum(doe$FLP),
+                 n34 = sum(doe$TrueLP),
+                 n123 = sum(doe$Sch == doe$Ken & doe$Ken==doe$TS),
+                 n124 = sum(doe$Sch == doe$Ken & doe$Ken==doe$LP),
+                 n134 = sum(doe$Sch == doe$TS & doe$TS==doe$LP),
+                 n234 = sum(doe$Ken == doe$TS & doe$TS==doe$LP),
+                 n1234 = sum(doe$Ken == doe$TS & doe$TS==doe$LP & doe$Ken==doe$Sch), 
+                 category = c("Шульце", "Кемени", "Исходные данные", "ЛП"),  
+                 fill = c("skyblue", "pink1", "mediumorchid","white"))
+}
+plot.venn(doe)
+```
+
+
+# Анализ зависимости
+
+```{r hh}
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(ROCR)
+
+set.seed(2015)
+idx<-sample(1:nrow(doe),3800)
+test<-doe[idx,]
+verify<-doe[-idx,]
+
+(mylogit <- glm(TrueS ~ val + experts + W, data = test, family=binomial(link='logit')))
+summary(mylogit)
+confint(mylogit)
+fitted.results<-predict(mylogit,newdata=verify,type='response')
+fitted.results <- (fitted.results > 0.5)
+confusionMatrix(fitted.results,verify$TrueS)
+
+
+fitted.results<-predict(mylogit,newdata=verify,type='response')
+pr <- prediction(fitted.results, verify$TrueS)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+
+(mytree <- rpart(as.factor(TrueS) ~ val + experts + W, data = test))
+prp(mytree,type = 2,extra = 104,fallen.leaves=TRUE)
+
+fitted.results<-predict(mytree,newdata=verify,type = "class")
+misClasificError <- mean(fitted.results != verify$TrueS)
+print(paste('Accuracy',1-misClasificError))
+
+confusionMatrix(fitted.results,verify$TrueS)
+
+pr <- prediction(predict(mytree,newdata=verify,type = "vector"), verify$TrueS)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+```
+
+Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число эеспертов больше 11
+
+```{r venn.fin}
+plot.venn(subset(doe,val>3.5 & experts>11))
+```
+
+
+### Информация о параметрах R
+
+```{r si}
+sessionInfo()
+```
