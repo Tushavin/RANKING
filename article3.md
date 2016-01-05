@@ -3,7 +3,9 @@
 4 января 2016 г.  
 
 Целью настоящего исследования является сравнение алгоритмов ранжирования объектов с точки зрения их эффективности.
+
 Сравниваются три алгоритма. Два из них были ранее описаны в статье Тушавин В. А. Ранжирование показателей качества с использованием методов Кемени-Янга и Шульце //Экономика и менеджмент систем управления. 2005. № 4.4.
+
 Третий - быстрый алгоритм нахождения медианы Кемени из пакета `ConsRank`.
 
 ### Определение библиотек и функций
@@ -15,16 +17,27 @@ library(ConsRank)
 ```
 
 ```
+## Warning: package 'ConsRank' was built under R version 3.2.3
+```
+
+```
 ## Loading required package: MASS
 ## Loading required package: proxy
+```
+
+```
+## Warning: package 'proxy' was built under R version 3.2.3
+```
+
+```
 ## 
 ## Attaching package: 'proxy'
 ## 
-## Следующие объекты скрыты от 'package:stats':
+## The following objects are masked from 'package:stats':
 ## 
 ##     as.dist, dist
 ## 
-## Следующий объект скрыт от 'package:base':
+## The following object is masked from 'package:base':
 ## 
 ##     as.matrix
 ## 
@@ -32,7 +45,7 @@ library(ConsRank)
 ## 
 ## Attaching package: 'ConsRank'
 ## 
-## Следующий объект скрыт от 'package:base':
+## The following object is masked from 'package:base':
 ## 
 ##     labels
 ```
@@ -115,7 +128,7 @@ rank_solve<-function(ranks) {
 }
 ```
 
-Поскольку предыдущая версия функции нахождения ранжирования методом Шульце требовала полное ранжирование заданное в виде последовательности номеров элементов, то необходимо её немного преобразовать для работы с таблицей рангов 
+Поскольку предыдущая версия функции ранжирования методом Шульце требовала полное ранжирование заданное в виде последовательности номеров элементов, то необходимо её немного преобразовать для работы с таблицей рангов.
 
 
 ```r
@@ -174,7 +187,20 @@ return(list(Consensus=consensus+1,Eltime=eltime))
 }
 ```
 
-Проведем тестирование на примере из Википедии
+Проведем тестирование на [примере из Википедии](https://en.wikipedia.org/wiki/Schulze_method)
+
+number of voters | order of preference
+-----------------|---------------------
+5 | ACBED
+5 | ADECB
+8 | BEDAC
+3 | CABED
+7 | CAEBD
+2 | CBADE
+7 | DCEBA
+8 | EBADC
+
+Schulze ranking is E > A > C > B > D, and E wins. 
 
 
 ```r
@@ -201,10 +227,10 @@ Schulze.m(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.003
+##       0
 ```
 
-Результаты свопали полностью. Функция работает.
+Результаты совпали полностью. Функция работает.
 Проверим результат с помощью пакета `ConsRank`
 
 
@@ -223,7 +249,7 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##   1.197
+##    0.88
 ```
 
 Имеется расхождение, поскольку пример является несбалансированным по рангам.
@@ -243,7 +269,7 @@ Schulze.m(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.047
+##    0.04
 ```
 
 ```r
@@ -261,7 +287,7 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.404
+##    0.31
 ```
 
 Результаты удовлетворительны. 
@@ -311,7 +337,6 @@ return(result)
 
 ```r
 if(!file.exists("doe.RDs")) { 
-  stop("Бля!")
   set.seed(2015)
   doe<-expand.grid(testn=1:100,val=3:8,experts=c(4,8,16,32,64,128,256,512))
   doe$W<-NA
@@ -364,54 +389,54 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 
  val   experts   TrueS   TrueF   TrueLP    SF   SLP   FLP   Shulze.time   FASTcons.time   LP.time
 ----  --------  ------  ------  -------  ----  ----  ----  ------------  --------------  --------
-   3         4      37      36        0    67    63    64         0.082           0.819     0.190
-   4         4      52      60       37    80    53    45         0.113           1.113     0.223
-   5         4      67      64       52    87    57    64         0.161           1.614     0.292
-   6         4      72      73       63    93    67    68         0.229           2.322     0.432
-   7         4      76      77       68    95    62    65         0.309           3.347     0.696
-   8         4      89      86       79    95    72    75         0.443           4.893     1.092
-   3         8      26      25        0    69    74    75         0.095           0.965     0.232
-   4         8      58      61       40    85    80    77         0.153           1.413     0.307
-   5         8      85      85       79    92    86    86         0.237           1.965     0.391
-   6         8      93      91       87    98    94    96         0.334           2.691     0.538
-   7         8      93      93       92    98    97    97         0.447           3.927     0.909
-   8         8      98      97       95    99    97    98         0.734           6.533     1.421
-   3        16      15      12        0    83    85    88         0.204           1.519     0.376
-   4        16      81      80       74    95    93    94         0.250           1.848     0.473
-   5        16      99      99       98   100    99    99         0.428           3.293     0.772
-   6        16      99     100       99    99   100    99         0.674           4.841     1.027
-   7        16     100     100       99   100    99    99         0.909           5.447     1.191
-   8        16      99     100       99    99   100    99         0.855           5.863     1.313
-   3        32      10      15        0    79    90    85         0.211           1.490     0.432
-   4        32      92      94       91    98    99    97         0.462           2.331     0.648
-   5        32     100     100      100   100   100   100         0.698           3.666     1.004
-   6        32     100     100      100   100   100   100         0.961           4.633     1.296
-   7        32     100     100      100   100   100   100         1.240           5.937     1.622
-   8        32     100     100      100   100   100   100         1.564           7.989     2.160
-   3        64       8      15        0    89    92    85         0.430           2.746     0.814
-   4        64      99      99       99   100   100   100         0.790           4.173     1.227
-   5        64     100     100      100   100   100   100         0.933           3.908     1.298
-   6        64     100     100      100   100   100   100         1.300           5.148     1.631
-   7        64     100     100      100   100   100   100         1.963           7.143     2.351
-   8        64     100     100      100   100   100   100         2.577           9.512     3.202
-   3       128       7      11        0    92    93    89         0.706           4.342     1.446
-   4       128     100     100      100   100   100   100         1.197           5.150     1.775
-   5       128     100     100      100   100   100   100         1.755           6.262     2.332
-   6       128     100     100      100   100   100   100         4.284          13.640     5.005
-   7       128     100     100      100   100   100   100         5.174          15.745     5.701
-   8       128     100     100      100   100   100   100         4.999          13.862     5.398
-   3       256       4       3        0    95    96    97         1.493           8.693     3.024
-   4       256     100     100      100   100   100   100         2.862          12.151     4.355
-   5       256     100     100      100   100   100   100         4.187          13.792     5.307
-   6       256     100     100      100   100   100   100         4.995          14.446     5.793
-   7       256     100     100      100   100   100   100         7.514          18.975     7.993
-   8       256     100     100      100   100   100   100         9.351          21.477     9.596
-   3       512       1       2        0    99    99    98         3.117          17.981     6.029
-   4       512     100     100      100   100   100   100         4.340          16.396     6.351
-   5       512     100     100      100   100   100   100         6.641          19.912     8.273
-   6       512     100     100      100   100   100   100         9.394          24.662    10.737
-   7       512     100     100      100   100   100   100        15.015          35.548    15.773
-   8       512     100     100      100   100   100   100        18.084          39.237    18.170
+   3         4      37      36        0    67    63    64          0.12            0.61      0.23
+   4         4      52      60       37    80    53    45          0.13            0.79      0.30
+   5         4      67      64       52    87    57    64          0.11            1.35      0.36
+   6         4      72      73       63    93    67    68          0.21            1.80      0.55
+   7         4      76      77       68    95    62    65          0.18            2.77      0.66
+   8         4      89      86       79    95    72    75          0.31            3.90      0.81
+   3         8      26      25        0    69    74    75          0.10            0.63      0.26
+   4         8      58      61       40    85    80    77          0.21            0.95      0.27
+   5         8      85      85       79    92    86    86          0.21            1.48      0.32
+   6         8      93      91       87    98    94    96          0.29            2.01      0.58
+   7         8      93      93       92    98    97    97          0.35            2.68      0.83
+   8         8      98      97       95    99    97    98          0.49            4.05      0.96
+   3        16      15      12        0    83    85    88          0.11            0.71      0.18
+   4        16      81      80       74    95    93    94          0.24            1.12      0.34
+   5        16      99      99       98   100    99    99          0.21            1.58      0.58
+   6        16      99     100       99    99   100    99          0.34            2.42      0.68
+   7        16     100     100       99   100    99    99          0.58            3.21      0.80
+   8        16      99     100       99    99   100    99          0.66            4.56      1.25
+   3        32      10      15        0    79    90    85          0.20            1.06      0.45
+   4        32      92      94       91    98    99    97          0.29            1.55      0.51
+   5        32     100     100      100   100   100   100          0.41            2.23      0.56
+   6        32     100     100      100   100   100   100          0.57            2.87      0.80
+   7        32     100     100      100   100   100   100          0.98            3.75      1.00
+   8        32     100     100      100   100   100   100          1.15            5.42      1.41
+   3        64       8      15        0    89    92    85          0.20            1.66      0.81
+   4        64      99      99       99   100   100   100          0.39            2.22      0.88
+   5        64     100     100      100   100   100   100          0.72            3.01      1.14
+   6        64     100     100      100   100   100   100          0.92            3.91      1.42
+   7        64     100     100      100   100   100   100          1.34            5.59      1.69
+   8        64     100     100      100   100   100   100          2.02            6.90      2.15
+   3       128       7      11        0    92    93    89          0.57            2.85      0.97
+   4       128     100     100      100   100   100   100          0.81            3.72      1.32
+   5       128     100     100      100   100   100   100          1.34            4.79      1.75
+   6       128     100     100      100   100   100   100          1.99            6.14      2.23
+   7       128     100     100      100   100   100   100          2.79            7.92      2.78
+   8       128     100     100      100   100   100   100          3.64            9.94      3.61
+   3       256       4       3        0    95    96    97          0.96            5.27      1.85
+   4       256     100     100      100   100   100   100          1.71            6.57      2.39
+   5       256     100     100      100   100   100   100          2.84            8.16      3.20
+   6       256     100     100      100   100   100   100          3.91           10.53      4.09
+   7       256     100     100      100   100   100   100          5.32           13.15      5.25
+   8       256     100     100      100   100   100   100          6.86           16.32      6.63
+   3       512       1       2        0    99    99    98          1.95            9.91      3.48
+   4       512     100     100      100   100   100   100          3.38           12.48      4.52
+   5       512     100     100      100   100   100   100          5.55           16.16      6.29
+   6       512     100     100      100   100   100   100          7.78           20.34      8.17
+   7       512     100     100      100   100   100   100         10.71           24.74     10.19
+   8       512     100     100      100   100   100   100         13.65           29.16     12.42
 
 ### Время выполнения скрипта в зависимости от алгоритма
 
@@ -445,13 +470,6 @@ library(VennDiagram)
 
 ```
 ## Loading required package: grid
-## Loading required package: futile.logger
-## 
-## Attaching package: 'futile.logger'
-## 
-## Следующий объект скрыт от 'package:gtools':
-## 
-##     scat
 ```
 
 ```r
@@ -481,7 +499,7 @@ plot.venn(doe)
 ![](article3_files/figure-html/venn.first-1.png) 
 
 ```
-## (polygon[GRID.polygon.133], polygon[GRID.polygon.134], polygon[GRID.polygon.135], polygon[GRID.polygon.136], polygon[GRID.polygon.137], polygon[GRID.polygon.138], polygon[GRID.polygon.139], polygon[GRID.polygon.140], text[GRID.text.141], text[GRID.text.142], text[GRID.text.143], text[GRID.text.144], text[GRID.text.145], text[GRID.text.146], text[GRID.text.147], text[GRID.text.148], text[GRID.text.149], text[GRID.text.150], text[GRID.text.151], text[GRID.text.152], text[GRID.text.153], text[GRID.text.154], text[GRID.text.155], text[GRID.text.156], text[GRID.text.157], text[GRID.text.158], text[GRID.text.159])
+## (polygon[GRID.polygon.139], polygon[GRID.polygon.140], polygon[GRID.polygon.141], polygon[GRID.polygon.142], polygon[GRID.polygon.143], polygon[GRID.polygon.144], polygon[GRID.polygon.145], polygon[GRID.polygon.146], text[GRID.text.147], text[GRID.text.148], text[GRID.text.149], text[GRID.text.150], text[GRID.text.151], text[GRID.text.152], text[GRID.text.153], text[GRID.text.154], text[GRID.text.155], text[GRID.text.156], text[GRID.text.157], text[GRID.text.158], text[GRID.text.159], text[GRID.text.160], text[GRID.text.161], text[GRID.text.162], text[GRID.text.163], text[GRID.text.164], text[GRID.text.165])
 ```
 
 
@@ -503,15 +521,19 @@ library(ROCR)
 ```
 
 ```
+## Warning: package 'ROCR' was built under R version 3.2.3
+```
+
+```
 ## Loading required package: gplots
 ## 
 ## Attaching package: 'gplots'
 ## 
-## Следующий объект скрыт '.GlobalEnv':
+## The following object is masked _by_ '.GlobalEnv':
 ## 
 ##     plot.venn
 ## 
-## Следующий объект скрыт от 'package:stats':
+## The following object is masked from 'package:stats':
 ## 
 ##     lowess
 ```
@@ -626,7 +648,7 @@ confusionMatrix(fitted.results,verify$TrueS)
 fitted.results<-predict(mylogit,newdata=verify,type='response')
 pr <- prediction(fitted.results, verify$TrueS)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
+plot(prf,colorize=T)
 ```
 
 ![](article3_files/figure-html/hh-1.png) 
@@ -714,7 +736,7 @@ confusionMatrix(fitted.results,verify$TrueS)
 ```r
 pr <- prediction(predict(mytree,newdata=verify,type = "vector"), verify$TrueS)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
+plot(prf,colorize=T)
 ```
 
 ![](article3_files/figure-html/hh-3.png) 
@@ -729,7 +751,7 @@ auc
 ## [1] 0.899416
 ```
 
-Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число эеспертов больше 11
+Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число экспертов больше 11
 
 
 ```r
@@ -739,7 +761,7 @@ plot.venn(subset(doe,val>3.5 & experts>11))
 ![](article3_files/figure-html/venn.fin-1.png) 
 
 ```
-## (polygon[GRID.polygon.170], polygon[GRID.polygon.171], polygon[GRID.polygon.172], polygon[GRID.polygon.173], polygon[GRID.polygon.174], polygon[GRID.polygon.175], polygon[GRID.polygon.176], polygon[GRID.polygon.177], text[GRID.text.178], text[GRID.text.179], text[GRID.text.180], text[GRID.text.181], text[GRID.text.182], text[GRID.text.183], text[GRID.text.184], text[GRID.text.185], text[GRID.text.186], text[GRID.text.187], text[GRID.text.188], text[GRID.text.189], text[GRID.text.190], text[GRID.text.191], text[GRID.text.192], text[GRID.text.193], text[GRID.text.194], text[GRID.text.195], text[GRID.text.196])
+## (polygon[GRID.polygon.176], polygon[GRID.polygon.177], polygon[GRID.polygon.178], polygon[GRID.polygon.179], polygon[GRID.polygon.180], polygon[GRID.polygon.181], polygon[GRID.polygon.182], polygon[GRID.polygon.183], text[GRID.text.184], text[GRID.text.185], text[GRID.text.186], text[GRID.text.187], text[GRID.text.188], text[GRID.text.189], text[GRID.text.190], text[GRID.text.191], text[GRID.text.192], text[GRID.text.193], text[GRID.text.194], text[GRID.text.195], text[GRID.text.196], text[GRID.text.197], text[GRID.text.198], text[GRID.text.199], text[GRID.text.200], text[GRID.text.201], text[GRID.text.202])
 ```
 
 
@@ -751,39 +773,41 @@ sessionInfo()
 ```
 
 ```
-## R version 3.2.3 (2015-12-10)
-## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: OS X 10.11.2 (El Capitan)
+## R version 3.2.2 (2015-08-14)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows 8 x64 (build 9200)
 ## 
 ## locale:
-## [1] ru_RU.UTF-8/ru_RU.UTF-8/ru_RU.UTF-8/C/ru_RU.UTF-8/ru_RU.UTF-8
+## [1] LC_COLLATE=Russian_Russia.1251  LC_CTYPE=Russian_Russia.1251   
+## [3] LC_MONETARY=Russian_Russia.1251 LC_NUMERIC=C                   
+## [5] LC_TIME=Russian_Russia.1251    
 ## 
 ## attached base packages:
 ## [1] grid      stats     graphics  grDevices utils     datasets  methods  
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] ROCR_1.0-7          gplots_2.17.0       caret_6.0-62       
-##  [4] lattice_0.20-33     rpart.plot_1.5.3    rpart_4.1-10       
-##  [7] VennDiagram_1.6.16  futile.logger_1.4.1 reshape2_1.4.1     
-## [10] ggplot2_2.0.0       irr_0.84            lpSolve_5.6.13     
-## [13] ConsRank_1.0.2      rgl_0.95.1435       proxy_0.4-15       
-## [16] MASS_7.3-45         gtools_3.5.0       
+##  [1] ROCR_1.0-7        gplots_2.17.0     caret_6.0-62     
+##  [4] lattice_0.20-33   rpart.plot_1.5.3  rpart_4.1-10     
+##  [7] VennDiagram_1.6.9 reshape2_1.4.1    ggplot2_1.0.1    
+## [10] irr_0.84          lpSolve_5.6.13    ConsRank_1.0.2   
+## [13] rgl_0.95.1367     proxy_0.4-15      MASS_7.3-45      
+## [16] gtools_3.5.0     
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] splines_3.2.3        colorspace_1.2-6     htmltools_0.3       
-##  [4] stats4_3.2.3         yaml_2.1.13          mgcv_1.8-9          
-##  [7] e1071_1.6-7          nloptr_1.0.4         lambda.r_1.1.7      
-## [10] foreach_1.4.3        plyr_1.8.3           stringr_1.0.0       
-## [13] MatrixModels_0.4-1   munsell_0.4.2        gtable_0.1.2        
-## [16] caTools_1.17.1       codetools_0.2-14     evaluate_0.8        
-## [19] labeling_0.3         knitr_1.11           SparseM_1.7         
-## [22] class_7.3-14         quantreg_5.19        pbkrtest_0.4-4      
-## [25] parallel_3.2.3       highr_0.5.1          Rcpp_0.12.2         
-## [28] KernSmooth_2.23-15   scales_0.3.0         formatR_1.2.1       
-## [31] gdata_2.17.0         lme4_1.1-10          digest_0.6.8        
-## [34] stringi_1.0-1        tools_3.2.3          bitops_1.0-6        
-## [37] magrittr_1.5         futile.options_1.0.0 car_2.1-1           
-## [40] Matrix_1.2-3         minqa_1.2.4          rmarkdown_0.9       
-## [43] iterators_1.0.8      nnet_7.3-11          nlme_3.1-122
+##  [1] Rcpp_0.12.2        nloptr_1.0.4       formatR_1.2.1     
+##  [4] plyr_1.8.3         highr_0.5.1        class_7.3-14      
+##  [7] bitops_1.0-6       iterators_1.0.8    tools_3.2.2       
+## [10] digest_0.6.8       lme4_1.1-10        evaluate_0.8      
+## [13] gtable_0.1.2       nlme_3.1-122       mgcv_1.8-9        
+## [16] Matrix_1.2-3       foreach_1.4.3      parallel_3.2.2    
+## [19] yaml_2.1.13        SparseM_1.7        proto_0.3-10      
+## [22] e1071_1.6-7        stringr_1.0.0      knitr_1.11        
+## [25] caTools_1.17.1     MatrixModels_0.4-1 stats4_3.2.2      
+## [28] nnet_7.3-11        rmarkdown_0.8.1    gdata_2.17.0      
+## [31] minqa_1.2.4        car_2.1-0          magrittr_1.5      
+## [34] scales_0.3.0       codetools_0.2-14   htmltools_0.2.6   
+## [37] splines_3.2.2      pbkrtest_0.4-2     colorspace_1.2-6  
+## [40] quantreg_5.19      labeling_0.3       KernSmooth_2.23-15
+## [43] stringi_1.0-1      munsell_0.4.2
 ```

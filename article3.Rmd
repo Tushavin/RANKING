@@ -3,13 +3,15 @@ title: "Сравнение подходов к ранжированию"
 author: "Тушавин В. А."
 date: "4 января 2016 г."
 output:
-  word_document: default
   html_document:
     keep_md: yes
+  word_document: default
 ---
 
 Целью настоящего исследования является сравнение алгоритмов ранжирования объектов с точки зрения их эффективности.
+
 Сравниваются три алгоритма. Два из них были ранее описаны в статье Тушавин В. А. Ранжирование показателей качества с использованием методов Кемени-Янга и Шульце //Экономика и менеджмент систем управления. 2005. № 4.4.
+
 Третий - быстрый алгоритм нахождения медианы Кемени из пакета `ConsRank`.
 
 ### Определение библиотек и функций
@@ -94,7 +96,7 @@ rank_solve<-function(ranks) {
 }
 ```
 
-Поскольку предыдущая версия функции нахождения ранжирования методом Шульце требовала полное ранжирование заданное в виде последовательности номеров элементов, то необходимо её немного преобразовать для работы с таблицей рангов 
+Поскольку предыдущая версия функции ранжирования методом Шульце требовала полное ранжирование заданное в виде последовательности номеров элементов, то необходимо её немного преобразовать для работы с таблицей рангов.
 
 ```{r schile}
 # Модифицированния функция нахождения итогового
@@ -152,7 +154,20 @@ return(list(Consensus=consensus+1,Eltime=eltime))
 }
 ```
 
-Проведем тестирование на примере из Википедии
+Проведем тестирование на [примере из Википедии](https://en.wikipedia.org/wiki/Schulze_method)
+
+number of voters | order of preference
+-----------------|---------------------
+5 | ACBED
+5 | ADECB
+8 | BEDAC
+3 | CABED
+7 | CAEBD
+2 | CBADE
+7 | DCEBA
+8 | EBADC
+
+Schulze ranking is E > A > C > B > D, and E wins. 
 
 ```{r test.sh}
 test<-data.frame(order=c("ACBED","ADECB",
@@ -171,7 +186,7 @@ Wk<-test$wk
 Schulze.m(ranks,Wk)
 ```
 
-Результаты свопали полностью. Функция работает.
+Результаты совпали полностью. Функция работает.
 Проверим результат с помощью пакета `ConsRank`
 
 ```{r test.fc}
@@ -233,7 +248,6 @@ return(result)
 
 ```{r longcalc}
 if(!file.exists("doe.RDs")) { 
-  stop("Бля!")
   set.seed(2015)
   doe<-expand.grid(testn=1:100,val=3:8,experts=c(4,8,16,32,64,128,256,512))
   doe$W<-NA
@@ -352,7 +366,7 @@ confusionMatrix(fitted.results,verify$TrueS)
 fitted.results<-predict(mylogit,newdata=verify,type='response')
 pr <- prediction(fitted.results, verify$TrueS)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
+plot(prf,colorize=T)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
@@ -369,14 +383,14 @@ confusionMatrix(fitted.results,verify$TrueS)
 
 pr <- prediction(predict(mytree,newdata=verify,type = "vector"), verify$TrueS)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
+plot(prf,colorize=T)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
 
 ```
 
-Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число эеспертов больше 11
+Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число экспертов больше 11
 
 ```{r venn.fin}
 plot.venn(subset(doe,val>3.5 & experts>11))
