@@ -17,10 +17,18 @@ output:
 ### Определение библиотек и функций
 
 ```{r setup}
+library(ggplot2)
+library(scales)
 library(gtools)
 library(ConsRank)
 library(lpSolve)
 library(irr)
+library(reshape2)
+library(VennDiagram)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(ROCR)
 
 # Функции для нахождения медианы Кемени
 # Нахождение расстояния между оценками
@@ -53,7 +61,7 @@ build_graph<-function(ranks) {
 }
 
 # Нахождение медианы Кемени посредством решения задачи ЛП
-rank_solve<-function(ranks) {
+rank_solve<-function(ranks,Wk=NULL) {
   tic = proc.time()[3]
   n_voters<-nrow(ranks)
   n_candidates<-ncol(ranks)
@@ -90,9 +98,9 @@ rank_solve<-function(ranks) {
   tau<-sum(apply(ranks,1,function(x){kendall_tau(x,best_rank)}))
   toc = proc.time()[3]
   eltime = toc - tic
-  Consensus=best_rank+1
-  names(Consensus)<-LETTERS[1:n_candidates]
-  return(list(min_dist=tau,best_rank=best_rank,Consensus=Consensus,Eltime=eltime))
+  consensus<-matrix(best_rank+1,nrow=1,ncol=n_candidates)
+  colnames(consensus)<-colnames(ranks)
+  return(list(min_dist=tau,best_rank=best_rank,Consensus=consensus,Eltime=eltime))
 }
 ```
 
@@ -191,19 +199,114 @@ Schulze.m(ranks,Wk)
 
 ```{r test.fc}
 FASTcons(ranks,Wk)
+QuickCons(ranks,Wk)
+EMCons(ranks,Wk)
 ```
 
 Имеется расхождение, поскольку пример является несбалансированным по рангам.
 
-Сравним результаты тестового примера из пакета `ConsRank`
+Сравним результаты тестового примера из пакета `ConsRank`. Данные представляют собой ранжирование 130 студентами семи видов спорта в соответствии с их предпочтениями.
+(Marden, J. I. (1996). Analyzing and modeling rank data. CRC Press.)
 
 ```{r test.comp}
 data(sports)
-Schulze.m(sports)
+colnames(sports)
+colnames(sports)<-c("Бейсбол", "Футбол", "Баскетбол", "Теннис", "Велоспорт", "Плавание", "Бег трусцой")
+dim(sports)
+
 FASTcons(sports,maxiter=10)
+QuickCons(sports)
+EMCons(sports)
+
+Schulze.m(sports)
+rank_solve(sports)
 ```
 
-Результаты удовлетворительны. 
+Результаты совпадают. 
+
+### Сравнение времени выполнения алгоритмов
+
+```{r alg.time,cache=TRUE}
+#  Тест по времени
+set.seed(1968)
+d.len<-c()
+d.n<-c()
+d.mth<-c()
+d.time<-c()
+
+pb <- txtProgressBar(min = 0, max = 24, style = 3,file = stderr())
+zzz<-0
+for(rank_len in 3:8)
+  for(n_ranks in c(5,10,15,20)) {
+    ranks<-c()
+    for(i in 1:n_ranks) ranks<-c(ranks,sample(1:rank_len,rank_len))
+    ranks<-matrix(ranks,ncol=rank_len,byrow=T)
+    
+    start.time <- Sys.time()
+    z<-FASTcons(ranks)
+    end.time <- Sys.time()
+    time.taken <-end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"FASTcons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+     start.time <- Sys.time()
+    z<-QuickCons(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"QuickCons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-EMCons(ranks,PS=F)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"EMCons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-Schulze.m(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Schulze")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-rank_solve(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"LP")
+    d.time<-c(d.time,as.numeric(time.taken))
+    zzz<-zzz+1
+    setTxtProgressBar(pb, zzz)
+  }
+close(pb)
+
+mydata<-data.frame(Показателей=d.len,Экспертов=d.n,Время=d.time,Метод=d.mth)
+mydata$Экспертов<-as.factor(mydata$Экспертов)
+mydata$Метод<-as.factor(mydata$Метод)
+g<-ggplot(aggregate(Время~Показателей+Метод,data=mydata,mean),aes(x=Показателей,y=Время,linetype=Метод,col=Метод))+
+  geom_point()+
+  geom_line(size=1)+
+  scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
+                labels=trans_format("log10",math_format(10^.x)),
+                minor_breaks=log10(5)+-4:1)+
+  xlab("Количество оцениваемых показателей")+ylab("Время расчета, сек.")
+g<-g+theme_bw(base_size = 16)
+g  #+theme(legend.position=c(1,1),legend.justification=c(1,1))
+
+```
+
+
 
 ### Задание функций тестирования
 
@@ -276,7 +379,7 @@ if(!file.exists("doe.RDs")) {
     doe$TS[i]<-paste0(names(r1[[1]]$TrueValue)[order(r1[[1]]$TrueValue)],collapse="")
     doe$Sch[i]<-paste0(names(r1[[1]]$Shulze$Consensus[1,])[order(r1[[1]]$Shulze$Consensus[1,])],collapse="")
     doe$Ken[i]<-paste0(names(r1[[1]]$FASTcons$Consensus[1,])[order(r1[[1]]$FASTcons$Consensus[1,])],collapse="")
-    doe$LP[i]<-paste0(names(r1[[1]]$LP$Consensus)[order(r1[[1]]$LP$Consensus)],collapse="")
+    doe$LP[i]<-paste0(names(r1[[1]]$LP$Consensus[1,])[order(r1[[1]]$LP$Consensus[1,])],collapse="")
     
     doe$TrueS[i]<-(doe$TS[i] == doe$Sch[i])
     doe$TrueF[i]<-(doe$TS[i] == doe$Ken[i])
@@ -299,8 +402,6 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 ### Время выполнения скрипта в зависимости от алгоритма
 
 ```{r sc.time}
-library(ggplot2)
-library(reshape2)
 agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
@@ -316,8 +417,6 @@ ggsave("Pic03_00.png",width=6,height=4,dpi=300)
 ### Построение диаграммы Венна
 
 ```{r venn.first}
-library(VennDiagram)
-
 plot.venn<-function(doe) {
   grid.newpage()
   draw.quad.venn(area1 = nrow(doe), 
@@ -345,11 +444,6 @@ plot.venn(doe)
 # Анализ зависимости
 
 ```{r hh}
-library(rpart)
-library(rpart.plot)
-library(caret)
-library(ROCR)
-
 set.seed(2015)
 idx<-sample(1:nrow(doe),3800)
 test<-doe[idx,]

@@ -12,6 +12,8 @@
 
 
 ```r
+library(ggplot2)
+library(scales)
 library(gtools)
 library(ConsRank)
 ```
@@ -53,7 +55,43 @@ library(ConsRank)
 ```r
 library(lpSolve)
 library(irr)
+library(reshape2)
+library(VennDiagram)
+```
 
+```
+## Loading required package: grid
+```
+
+```r
+library(rpart)
+library(rpart.plot)
+library(caret)
+```
+
+```
+## Loading required package: lattice
+```
+
+```r
+library(ROCR)
+```
+
+```
+## Warning: package 'ROCR' was built under R version 3.2.3
+```
+
+```
+## Loading required package: gplots
+## 
+## Attaching package: 'gplots'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     lowess
+```
+
+```r
 # Функции для нахождения медианы Кемени
 # Нахождение расстояния между оценками
 kendall_tau<-function(rank.a,rank.b) {
@@ -85,7 +123,7 @@ build_graph<-function(ranks) {
 }
 
 # Нахождение медианы Кемени посредством решения задачи ЛП
-rank_solve<-function(ranks) {
+rank_solve<-function(ranks,Wk=NULL) {
   tic = proc.time()[3]
   n_voters<-nrow(ranks)
   n_candidates<-ncol(ranks)
@@ -122,9 +160,9 @@ rank_solve<-function(ranks) {
   tau<-sum(apply(ranks,1,function(x){kendall_tau(x,best_rank)}))
   toc = proc.time()[3]
   eltime = toc - tic
-  Consensus=best_rank+1
-  names(Consensus)<-LETTERS[1:n_candidates]
-  return(list(min_dist=tau,best_rank=best_rank,Consensus=Consensus,Eltime=eltime))
+  consensus<-matrix(best_rank+1,nrow=1,ncol=n_candidates)
+  colnames(consensus)<-colnames(ranks)
+  return(list(min_dist=tau,best_rank=best_rank,Consensus=consensus,Eltime=eltime))
 }
 ```
 
@@ -227,7 +265,7 @@ Schulze.m(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##       0
+##    0.01
 ```
 
 Результаты совпали полностью. Функция работает.
@@ -249,27 +287,79 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.88
+##    0.86
 ```
 
-Имеется расхождение, поскольку пример является несбалансированным по рангам.
-
-Сравним результаты тестового примера из пакета `ConsRank`
-
-
 ```r
-data(sports)
-Schulze.m(sports)
+QuickCons(ranks,Wk)
 ```
 
 ```
 ## $Consensus
-##      Baseball Football Basketball Tennis Cycling Swimming Jogging
-## [1,]        4        6          3      5       1        2       7
+##      A B C D E
+## [1,] 3 2 5 4 1
+## 
+## $Tau
+## [1] 0.1555556
 ## 
 ## $Eltime
 ## elapsed 
-##    0.04
+##    0.05
+```
+
+```r
+EMCons(ranks,Wk)
+```
+
+```
+## [1] "round 1"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 3 branches"
+## [1] "evaluating 13 branches"
+## [1] "evaluating 33 branches"
+## [1] "round 2"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 3 branches"
+## [1] "evaluating 13 branches"
+## [1] "evaluating 18 branches"
+```
+
+```
+## $Consensus
+##      A B C D E
+## [1,] 3 2 5 4 1
+## 
+## $Tau
+## [1] 0.1555556
+## 
+## $Eltime
+## elapsed 
+##    0.11
+```
+
+Имеется расхождение, поскольку пример является несбалансированным по рангам.
+
+Сравним результаты тестового примера из пакета `ConsRank`. Данные представляют собой ранжирование 130 студентами семи видов спорта в соответствии с их предпочтениями.
+(Marden, J. I. (1996). Analyzing and modeling rank data. CRC Press.)
+
+
+```r
+data(sports)
+colnames(sports)
+```
+
+```
+## [1] "Baseball"   "Football"   "Basketball" "Tennis"     "Cycling"   
+## [6] "Swimming"   "Jogging"
+```
+
+```r
+colnames(sports)<-c("Бейсбол", "Футбол", "Баскетбол", "Теннис", "Велоспорт", "Плавание", "Бег трусцой")
+dim(sports)
+```
+
+```
+## [1] 130   7
 ```
 
 ```r
@@ -278,8 +368,8 @@ FASTcons(sports,maxiter=10)
 
 ```
 ## $Consensus
-##      Baseball Football Basketball Tennis Cycling Swimming Jogging
-## [1,]        4        6          3      5       1        2       7
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
 ## 
 ## $Tau
 ##           [,1]
@@ -287,10 +377,175 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.31
+##    0.33
 ```
 
-Результаты удовлетворительны. 
+```r
+QuickCons(sports)
+```
+
+```
+## $Consensus
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
+## 
+## $Tau
+##           [,1]
+## [1,] 0.1443223
+## 
+## $Eltime
+## elapsed 
+##    0.08
+```
+
+```r
+EMCons(sports)
+```
+
+```
+## [1] "round 1"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 1 branches"
+## [1] "evaluating 1 branches"
+```
+
+```
+## $Consensus
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
+## 
+## $Tau
+## [1] 0.1443223
+## 
+## $Eltime
+## elapsed 
+##    0.06
+```
+
+```r
+Schulze.m(sports)
+```
+
+```
+## $Consensus
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
+## 
+## $Eltime
+## elapsed 
+##    0.03
+```
+
+```r
+rank_solve(sports)
+```
+
+```
+## $min_dist
+## [1] 1168
+## 
+## $best_rank
+## [1] 3 5 2 4 0 1 6
+## 
+## $Consensus
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
+## 
+## $Eltime
+## elapsed 
+##    0.04
+```
+
+Результаты совпадают. 
+
+### Сравнение времени выполнения алгоритмов
+
+
+```r
+#  Тест по времени
+set.seed(1968)
+d.len<-c()
+d.n<-c()
+d.mth<-c()
+d.time<-c()
+
+pb <- txtProgressBar(min = 0, max = 24, style = 3,file = stderr())
+zzz<-0
+for(rank_len in 3:8)
+  for(n_ranks in c(5,10,15,20)) {
+    ranks<-c()
+    for(i in 1:n_ranks) ranks<-c(ranks,sample(1:rank_len,rank_len))
+    ranks<-matrix(ranks,ncol=rank_len,byrow=T)
+    
+    start.time <- Sys.time()
+    z<-FASTcons(ranks)
+    end.time <- Sys.time()
+    time.taken <-end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"FASTcons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+     start.time <- Sys.time()
+    z<-QuickCons(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"QuickCons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-EMCons(ranks,PS=F)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"EMCons")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-Schulze.m(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"Schulze")
+    d.time<-c(d.time,as.numeric(time.taken))
+    
+    start.time <- Sys.time()
+    z<-rank_solve(ranks)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    d.len<-c(d.len,rank_len)
+    d.n<-c(d.n,n_ranks)
+    d.mth<-c(d.mth,"LP")
+    d.time<-c(d.time,as.numeric(time.taken))
+    zzz<-zzz+1
+    setTxtProgressBar(pb, zzz)
+  }
+close(pb)
+
+mydata<-data.frame(Показателей=d.len,Экспертов=d.n,Время=d.time,Метод=d.mth)
+mydata$Экспертов<-as.factor(mydata$Экспертов)
+mydata$Метод<-as.factor(mydata$Метод)
+g<-ggplot(aggregate(Время~Показателей+Метод,data=mydata,mean),aes(x=Показателей,y=Время,linetype=Метод,col=Метод))+
+  geom_point()+
+  geom_line(size=1)+
+  scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
+                labels=trans_format("log10",math_format(10^.x)),
+                minor_breaks=log10(5)+-4:1)+
+  xlab("Количество оцениваемых показателей")+ylab("Время расчета, сек.")
+g<-g+theme_bw(base_size = 16)
+g  #+theme(legend.position=c(1,1),legend.justification=c(1,1))
+```
+
+![](article3_files/figure-html/alg.time-1.png) 
+
+
 
 ### Задание функций тестирования
 
@@ -365,7 +620,7 @@ if(!file.exists("doe.RDs")) {
     doe$TS[i]<-paste0(names(r1[[1]]$TrueValue)[order(r1[[1]]$TrueValue)],collapse="")
     doe$Sch[i]<-paste0(names(r1[[1]]$Shulze$Consensus[1,])[order(r1[[1]]$Shulze$Consensus[1,])],collapse="")
     doe$Ken[i]<-paste0(names(r1[[1]]$FASTcons$Consensus[1,])[order(r1[[1]]$FASTcons$Consensus[1,])],collapse="")
-    doe$LP[i]<-paste0(names(r1[[1]]$LP$Consensus)[order(r1[[1]]$LP$Consensus)],collapse="")
+    doe$LP[i]<-paste0(names(r1[[1]]$LP$Consensus[1,])[order(r1[[1]]$LP$Consensus[1,])],collapse="")
     
     doe$TrueS[i]<-(doe$TS[i] == doe$Sch[i])
     doe$TrueF[i]<-(doe$TS[i] == doe$Ken[i])
@@ -442,8 +697,6 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 
 
 ```r
-library(ggplot2)
-library(reshape2)
 agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
@@ -463,14 +716,6 @@ ggsave("Pic03_00.png",width=6,height=4,dpi=300)
 
 ### Построение диаграммы Венна
 
-
-```r
-library(VennDiagram)
-```
-
-```
-## Loading required package: grid
-```
 
 ```r
 plot.venn<-function(doe) {
@@ -499,44 +744,12 @@ plot.venn(doe)
 ![](article3_files/figure-html/venn.first-1.png) 
 
 ```
-## (polygon[GRID.polygon.139], polygon[GRID.polygon.140], polygon[GRID.polygon.141], polygon[GRID.polygon.142], polygon[GRID.polygon.143], polygon[GRID.polygon.144], polygon[GRID.polygon.145], polygon[GRID.polygon.146], text[GRID.text.147], text[GRID.text.148], text[GRID.text.149], text[GRID.text.150], text[GRID.text.151], text[GRID.text.152], text[GRID.text.153], text[GRID.text.154], text[GRID.text.155], text[GRID.text.156], text[GRID.text.157], text[GRID.text.158], text[GRID.text.159], text[GRID.text.160], text[GRID.text.161], text[GRID.text.162], text[GRID.text.163], text[GRID.text.164], text[GRID.text.165])
+## (polygon[GRID.polygon.149], polygon[GRID.polygon.150], polygon[GRID.polygon.151], polygon[GRID.polygon.152], polygon[GRID.polygon.153], polygon[GRID.polygon.154], polygon[GRID.polygon.155], polygon[GRID.polygon.156], text[GRID.text.157], text[GRID.text.158], text[GRID.text.159], text[GRID.text.160], text[GRID.text.161], text[GRID.text.162], text[GRID.text.163], text[GRID.text.164], text[GRID.text.165], text[GRID.text.166], text[GRID.text.167], text[GRID.text.168], text[GRID.text.169], text[GRID.text.170], text[GRID.text.171], text[GRID.text.172], text[GRID.text.173], text[GRID.text.174], text[GRID.text.175])
 ```
 
 
 # Анализ зависимости
 
-
-```r
-library(rpart)
-library(rpart.plot)
-library(caret)
-```
-
-```
-## Loading required package: lattice
-```
-
-```r
-library(ROCR)
-```
-
-```
-## Warning: package 'ROCR' was built under R version 3.2.3
-```
-
-```
-## Loading required package: gplots
-## 
-## Attaching package: 'gplots'
-## 
-## The following object is masked _by_ '.GlobalEnv':
-## 
-##     plot.venn
-## 
-## The following object is masked from 'package:stats':
-## 
-##     lowess
-```
 
 ```r
 set.seed(2015)
@@ -789,14 +1002,14 @@ sessionInfo()
 ## other attached packages:
 ##  [1] ROCR_1.0-7        gplots_2.17.0     caret_6.0-62     
 ##  [4] lattice_0.20-33   rpart.plot_1.5.3  rpart_4.1-10     
-##  [7] VennDiagram_1.6.9 reshape2_1.4.1    ggplot2_1.0.1    
-## [10] irr_0.84          lpSolve_5.6.13    ConsRank_1.0.2   
-## [13] rgl_0.95.1367     proxy_0.4-15      MASS_7.3-45      
-## [16] gtools_3.5.0     
+##  [7] VennDiagram_1.6.9 reshape2_1.4.1    irr_0.84         
+## [10] lpSolve_5.6.13    ConsRank_1.0.2    rgl_0.95.1367    
+## [13] proxy_0.4-15      MASS_7.3-45       gtools_3.5.0     
+## [16] scales_0.3.0      ggplot2_1.0.1    
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] Rcpp_0.12.2        nloptr_1.0.4       formatR_1.2.1     
-##  [4] plyr_1.8.3         highr_0.5.1        class_7.3-14      
+##  [1] Rcpp_0.12.2        highr_0.5.1        nloptr_1.0.4      
+##  [4] formatR_1.2.1      plyr_1.8.3         class_7.3-14      
 ##  [7] bitops_1.0-6       iterators_1.0.8    tools_3.2.2       
 ## [10] digest_0.6.8       lme4_1.1-10        evaluate_0.8      
 ## [13] gtable_0.1.2       nlme_3.1-122       mgcv_1.8-9        
@@ -806,8 +1019,8 @@ sessionInfo()
 ## [25] caTools_1.17.1     MatrixModels_0.4-1 stats4_3.2.2      
 ## [28] nnet_7.3-11        rmarkdown_0.8.1    gdata_2.17.0      
 ## [31] minqa_1.2.4        car_2.1-0          magrittr_1.5      
-## [34] scales_0.3.0       codetools_0.2-14   htmltools_0.2.6   
-## [37] splines_3.2.2      pbkrtest_0.4-2     colorspace_1.2-6  
-## [40] quantreg_5.19      labeling_0.3       KernSmooth_2.23-15
-## [43] stringi_1.0-1      munsell_0.4.2
+## [34] codetools_0.2-14   htmltools_0.2.6    splines_3.2.2     
+## [37] pbkrtest_0.4-2     colorspace_1.2-6   labeling_0.3      
+## [40] quantreg_5.19      KernSmooth_2.23-15 stringi_1.0-1     
+## [43] munsell_0.4.2
 ```
