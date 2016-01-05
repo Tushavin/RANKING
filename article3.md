@@ -19,27 +19,16 @@ library(ConsRank)
 ```
 
 ```
-## Warning: package 'ConsRank' was built under R version 3.2.3
-```
-
-```
 ## Loading required package: MASS
 ## Loading required package: proxy
-```
-
-```
-## Warning: package 'proxy' was built under R version 3.2.3
-```
-
-```
 ## 
 ## Attaching package: 'proxy'
 ## 
-## The following objects are masked from 'package:stats':
+## Следующие объекты скрыты от 'package:stats':
 ## 
 ##     as.dist, dist
 ## 
-## The following object is masked from 'package:base':
+## Следующий объект скрыт от 'package:base':
 ## 
 ##     as.matrix
 ## 
@@ -47,7 +36,7 @@ library(ConsRank)
 ## 
 ## Attaching package: 'ConsRank'
 ## 
-## The following object is masked from 'package:base':
+## Следующий объект скрыт от 'package:base':
 ## 
 ##     labels
 ```
@@ -61,6 +50,13 @@ library(VennDiagram)
 
 ```
 ## Loading required package: grid
+## Loading required package: futile.logger
+## 
+## Attaching package: 'futile.logger'
+## 
+## Следующий объект скрыт от 'package:gtools':
+## 
+##     scat
 ```
 
 ```r
@@ -78,15 +74,11 @@ library(ROCR)
 ```
 
 ```
-## Warning: package 'ROCR' was built under R version 3.2.3
-```
-
-```
 ## Loading required package: gplots
 ## 
 ## Attaching package: 'gplots'
 ## 
-## The following object is masked from 'package:stats':
+## Следующий объект скрыт от 'package:stats':
 ## 
 ##     lowess
 ```
@@ -206,7 +198,7 @@ Schulze.m<-function(ranks,Wk=NULL) {
     for(j in 1:n_candidates)
       if(i!=j) for(k in 1:n_candidates)
         if(i!=k & j !=k) result[j,k]<-max(result[j,k],
-                                          min(result[j,i],result[i,k]))
+                                        min(result[j,i],result[i,k]))   
   vec<-rep(0,n_candidates)
   for(k in 1:nrow(z<-combinations(n_candidates,2))) {
     i=z[k,1]
@@ -221,8 +213,10 @@ Schulze.m<-function(ranks,Wk=NULL) {
   colnames(consensus)<-colnames(ranks)
 toc = proc.time()[3]
 eltime = toc - tic
-return(list(Consensus=consensus+1,Eltime=eltime))
+return(list(Consensus=consensus+1,Schulze=result,Eltime=eltime))
 }
+
+Rcpp::sourceCpp('schulze.cpp')
 ```
 
 Проведем тестирование на [примере из Википедии](https://en.wikipedia.org/wiki/Schulze_method)
@@ -263,9 +257,17 @@ Schulze.m(ranks,Wk)
 ##      A B C D E
 ## [1,] 2 4 3 5 1
 ## 
+## $Schulze
+##      [,1] [,2] [,3] [,4] [,5]
+## [1,]    0   28   28   30   24
+## [2,]   25    0   28   33   24
+## [3,]   25   29    0   29   24
+## [4,]   25   28   28    0   24
+## [5,]   25   28   28   31    0
+## 
 ## $Eltime
 ## elapsed 
-##    0.01
+##   0.005
 ```
 
 Результаты совпали полностью. Функция работает.
@@ -287,7 +289,7 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.86
+##    1.31
 ```
 
 ```r
@@ -304,7 +306,7 @@ QuickCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.05
+##   0.053
 ```
 
 ```r
@@ -334,7 +336,7 @@ EMCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.11
+##   0.136
 ```
 
 Имеется расхождение, поскольку пример является несбалансированным по рангам.
@@ -377,7 +379,7 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.33
+##   0.406
 ```
 
 ```r
@@ -395,7 +397,7 @@ QuickCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.08
+##   0.106
 ```
 
 ```r
@@ -422,10 +424,11 @@ EMCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.06
+##   0.096
 ```
 
 ```r
+# Версия на R
 Schulze.m(sports)
 ```
 
@@ -434,9 +437,44 @@ Schulze.m(sports)
 ##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
 ## [1,]       4      6         3      5         1        2           7
 ## 
+## $Schulze
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7]
+## [1,]    0   81    0   66    0    0   82
+## [2,]    0    0    0    0    0    0   72
+## [3,]   69   76    0   66    0    0   88
+## [4,]    0   70    0    0    0    0   89
+## [5,]   69   73   69   71    0   71   96
+## [6,]   66   70   66   72    0    0   86
+## [7,]    0    0    0    0    0    0    0
+## 
 ## $Eltime
 ## elapsed 
-##    0.03
+##   0.037
+```
+
+```r
+#Версия на C++
+Schulze_M(sports)
+```
+
+```
+## $Consensus
+##      Бейсбол Футбол Баскетбол Теннис Велоспорт Плавание Бег трусцой
+## [1,]       4      6         3      5         1        2           7
+## 
+## $Schulze
+##      [,1] [,2] [,3] [,4] [,5] [,6] [,7]
+## [1,]    0   81    0   66    0    0   82
+## [2,]    0    0    0    0    0    0   72
+## [3,]   69   76    0   66    0    0   88
+## [4,]    0   70    0    0    0    0   89
+## [5,]   69   73   69   71    0   71   96
+## [6,]   66   70   66   72    0    0   86
+## [7,]    0    0    0    0    0    0    0
+## 
+## $Eltime
+##    elapsed 
+## 4.9714e-05
 ```
 
 ```r
@@ -456,7 +494,7 @@ rank_solve(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.04
+##    0.05
 ```
 
 Результаты совпадают. 
@@ -508,7 +546,7 @@ for(rank_len in 3:8)
     d.time<-c(d.time,as.numeric(time.taken))
     
     start.time <- Sys.time()
-    z<-Schulze.m(ranks)
+    z<-Schulze_M(ranks)
     end.time <- Sys.time()
     time.taken <- end.time - start.time
     d.len<-c(d.len,rank_len)
@@ -541,6 +579,10 @@ g<-ggplot(aggregate(Время~Показателей+Метод,data=mydata,mea
   xlab("Количество оцениваемых показателей")+ylab("Время расчета, сек.")
 g<-g+theme_bw(base_size = 16)
 g  #+theme(legend.position=c(1,1),legend.justification=c(1,1))
+```
+
+```
+## Warning in self$trans$transform(self$minor_breaks): созданы NaN
 ```
 
 ![](article3_files/figure-html/alg.time-1.png) 
@@ -579,7 +621,7 @@ dotest<-function(val=5,experts=10,tests=1,correct=0) {
     if(correct>0) for(j in 1:correct) z1[j,]<-x0
     result[[i]]<-list(kendall=kendall(t(z1)),
                       TrueValue=x0,
-                      Shulze=Schulze.m(z1),
+                      Shulze=Schulze_M(z1),
                       FASTcons=QuickCons(z1),
                       LP=rank_solve(z1-1))
   }
@@ -644,54 +686,54 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 
  val   experts   TrueS   TrueF   TrueLP    SF   SLP   FLP   Shulze.time   FASTcons.time   LP.time
 ----  --------  ------  ------  -------  ----  ----  ----  ------------  --------------  --------
-   3         4      37      36        0    67    63    64          0.12            0.61      0.23
-   4         4      52      60       37    80    53    45          0.13            0.79      0.30
-   5         4      67      64       52    87    57    64          0.11            1.35      0.36
-   6         4      72      73       63    93    67    68          0.21            1.80      0.55
-   7         4      76      77       68    95    62    65          0.18            2.77      0.66
-   8         4      89      86       79    95    72    75          0.31            3.90      0.81
-   3         8      26      25        0    69    74    75          0.10            0.63      0.26
-   4         8      58      61       40    85    80    77          0.21            0.95      0.27
-   5         8      85      85       79    92    86    86          0.21            1.48      0.32
-   6         8      93      91       87    98    94    96          0.29            2.01      0.58
-   7         8      93      93       92    98    97    97          0.35            2.68      0.83
-   8         8      98      97       95    99    97    98          0.49            4.05      0.96
-   3        16      15      12        0    83    85    88          0.11            0.71      0.18
-   4        16      81      80       74    95    93    94          0.24            1.12      0.34
-   5        16      99      99       98   100    99    99          0.21            1.58      0.58
-   6        16      99     100       99    99   100    99          0.34            2.42      0.68
-   7        16     100     100       99   100    99    99          0.58            3.21      0.80
-   8        16      99     100       99    99   100    99          0.66            4.56      1.25
-   3        32      10      15        0    79    90    85          0.20            1.06      0.45
-   4        32      92      94       91    98    99    97          0.29            1.55      0.51
-   5        32     100     100      100   100   100   100          0.41            2.23      0.56
-   6        32     100     100      100   100   100   100          0.57            2.87      0.80
-   7        32     100     100      100   100   100   100          0.98            3.75      1.00
-   8        32     100     100      100   100   100   100          1.15            5.42      1.41
-   3        64       8      15        0    89    92    85          0.20            1.66      0.81
-   4        64      99      99       99   100   100   100          0.39            2.22      0.88
-   5        64     100     100      100   100   100   100          0.72            3.01      1.14
-   6        64     100     100      100   100   100   100          0.92            3.91      1.42
-   7        64     100     100      100   100   100   100          1.34            5.59      1.69
-   8        64     100     100      100   100   100   100          2.02            6.90      2.15
-   3       128       7      11        0    92    93    89          0.57            2.85      0.97
-   4       128     100     100      100   100   100   100          0.81            3.72      1.32
-   5       128     100     100      100   100   100   100          1.34            4.79      1.75
-   6       128     100     100      100   100   100   100          1.99            6.14      2.23
-   7       128     100     100      100   100   100   100          2.79            7.92      2.78
-   8       128     100     100      100   100   100   100          3.64            9.94      3.61
-   3       256       4       3        0    95    96    97          0.96            5.27      1.85
-   4       256     100     100      100   100   100   100          1.71            6.57      2.39
-   5       256     100     100      100   100   100   100          2.84            8.16      3.20
-   6       256     100     100      100   100   100   100          3.91           10.53      4.09
-   7       256     100     100      100   100   100   100          5.32           13.15      5.25
-   8       256     100     100      100   100   100   100          6.86           16.32      6.63
-   3       512       1       2        0    99    99    98          1.95            9.91      3.48
-   4       512     100     100      100   100   100   100          3.38           12.48      4.52
-   5       512     100     100      100   100   100   100          5.55           16.16      6.29
-   6       512     100     100      100   100   100   100          7.78           20.34      8.17
-   7       512     100     100      100   100   100   100         10.71           24.74     10.19
-   8       512     100     100      100   100   100   100         13.65           29.16     12.42
+   3         4      37      36        0    67    63    64     0.0006134           0.984     0.207
+   4         4      52      60       37    80    53    45     0.0005918           1.159     0.232
+   5         4      67      64       52    87    57    64     0.0006976           1.959     0.370
+   6         4      72      73       63    93    67    68     0.0009001           2.760     0.481
+   7         4      76      77       68    95    62    65     0.0009591           3.968     0.726
+   8         4      89      86       79    95    72    75     0.0011465           5.687     1.137
+   3         8      26      25        0    69    74    75     0.0005847           1.133     0.261
+   4         8      58      61       40    85    80    77     0.0007142           1.854     0.558
+   5         8      85      85       79    92    86    86     0.0009325           2.349     0.473
+   6         8      93      91       87    98    94    96     0.0008912           2.700     0.522
+   7         8      93      93       92    98    97    97     0.0010195           4.058     0.812
+   8         8      98      97       95    99    97    98     0.0012233           6.320     1.299
+   3        16      15      12        0    83    85    88     0.0005927           1.354     0.333
+   4        16      81      80       74    95    93    94     0.0007365           2.010     0.425
+   5        16      99      99       98   100    99    99     0.0008739           3.078     0.648
+   6        16      99     100       99    99   100    99     0.0011506           3.172     0.762
+   7        16     100     100       99   100    99    99     0.0012624           4.840     1.268
+   8        16      99     100       99    99   100    99     0.0014079           6.671     1.535
+   3        32      10      15        0    79    90    85     0.0006798           2.035     0.513
+   4        32      92      94       91    98    99    97     0.0008034           2.097     0.568
+   5        32     100     100      100   100   100   100     0.0012943           3.339     0.855
+   6        32     100     100      100   100   100   100     0.0011967           3.884     1.010
+   7        32     100     100      100   100   100   100     0.0015900           5.224     1.431
+   8        32     100     100      100   100   100   100     0.0017272           6.934     1.881
+   3        64       8      15        0    89    92    85     0.0007975           2.426     0.725
+   4        64      99      99       99   100   100   100     0.0010219           3.066     0.943
+   5        64     100     100      100   100   100   100     0.0013611           5.609     1.617
+   6        64     100     100      100   100   100   100     0.0018985           8.473     2.733
+   7        64     100     100      100   100   100   100     0.0023558          10.962     3.334
+   8        64     100     100      100   100   100   100     0.0025999          11.133     3.507
+   3       128       7      11        0    92    93    89     0.0009624           3.764     1.266
+   4       128     100     100      100   100   100   100     0.0013170           4.823     1.637
+   5       128     100     100      100   100   100   100     0.0017028           6.015     2.128
+   6       128     100     100      100   100   100   100     0.0020554           7.546     2.736
+   7       128     100     100      100   100   100   100     0.0030943          11.162     4.534
+   8       128     100     100      100   100   100   100     0.0035546          15.536     5.897
+   3       256       4       3        0    95    96    97     0.0013534           7.012     2.343
+   4       256     100     100      100   100   100   100     0.0020334           9.993     3.506
+   5       256     100     100      100   100   100   100     0.0026432          11.775     4.398
+   6       256     100     100      100   100   100   100     0.0034648          13.800     5.540
+   7       256     100     100      100   100   100   100     0.0042200          16.157     6.966
+   8       256     100     100      100   100   100   100     0.0051927          19.826     8.700
+   3       512       1       2        0    99    99    98     0.0022246          16.445     5.686
+   4       512     100     100      100   100   100   100     0.0031334          15.743     6.303
+   5       512     100     100      100   100   100   100     0.0042382          19.571     7.748
+   6       512     100     100      100   100   100   100     0.0056990          23.939    10.399
+   7       512     100     100      100   100   100   100     0.0073756          29.067    12.916
+   8       512     100     100      100   100   100   100     0.0092957          35.709    16.560
 
 ### Время выполнения скрипта в зависимости от алгоритма
 
@@ -700,9 +742,13 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
-ggplot(md,aes(x=val,y=value,fill=variable))+
-  geom_bar(stat="identity",colour="black")+
-  scale_fill_discrete(name = "Алгоритм")+
+md<-aggregate(value~val+variable,sum,data=md)
+ggplot(md,aes(x=val,y=value,col=variable))+
+  geom_line(size=1)+geom_point()+
+ scale_color_discrete(name="Алгоритм")+
+  scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
+                labels=trans_format("log10",math_format(10^.x)),
+                minor_breaks=waiver())+  
   labs(x="Число параметров",y="Время, сек.")+
   theme_bw()+theme(text=element_text(size=14))
 ```
@@ -744,7 +790,7 @@ plot.venn(doe)
 ![](article3_files/figure-html/venn.first-1.png) 
 
 ```
-## (polygon[GRID.polygon.149], polygon[GRID.polygon.150], polygon[GRID.polygon.151], polygon[GRID.polygon.152], polygon[GRID.polygon.153], polygon[GRID.polygon.154], polygon[GRID.polygon.155], polygon[GRID.polygon.156], text[GRID.text.157], text[GRID.text.158], text[GRID.text.159], text[GRID.text.160], text[GRID.text.161], text[GRID.text.162], text[GRID.text.163], text[GRID.text.164], text[GRID.text.165], text[GRID.text.166], text[GRID.text.167], text[GRID.text.168], text[GRID.text.169], text[GRID.text.170], text[GRID.text.171], text[GRID.text.172], text[GRID.text.173], text[GRID.text.174], text[GRID.text.175])
+## (polygon[GRID.polygon.151], polygon[GRID.polygon.152], polygon[GRID.polygon.153], polygon[GRID.polygon.154], polygon[GRID.polygon.155], polygon[GRID.polygon.156], polygon[GRID.polygon.157], polygon[GRID.polygon.158], text[GRID.text.159], text[GRID.text.160], text[GRID.text.161], text[GRID.text.162], text[GRID.text.163], text[GRID.text.164], text[GRID.text.165], text[GRID.text.166], text[GRID.text.167], text[GRID.text.168], text[GRID.text.169], text[GRID.text.170], text[GRID.text.171], text[GRID.text.172], text[GRID.text.173], text[GRID.text.174], text[GRID.text.175], text[GRID.text.176], text[GRID.text.177])
 ```
 
 
@@ -974,7 +1020,7 @@ plot.venn(subset(doe,val>3.5 & experts>11))
 ![](article3_files/figure-html/venn.fin-1.png) 
 
 ```
-## (polygon[GRID.polygon.176], polygon[GRID.polygon.177], polygon[GRID.polygon.178], polygon[GRID.polygon.179], polygon[GRID.polygon.180], polygon[GRID.polygon.181], polygon[GRID.polygon.182], polygon[GRID.polygon.183], text[GRID.text.184], text[GRID.text.185], text[GRID.text.186], text[GRID.text.187], text[GRID.text.188], text[GRID.text.189], text[GRID.text.190], text[GRID.text.191], text[GRID.text.192], text[GRID.text.193], text[GRID.text.194], text[GRID.text.195], text[GRID.text.196], text[GRID.text.197], text[GRID.text.198], text[GRID.text.199], text[GRID.text.200], text[GRID.text.201], text[GRID.text.202])
+## (polygon[GRID.polygon.178], polygon[GRID.polygon.179], polygon[GRID.polygon.180], polygon[GRID.polygon.181], polygon[GRID.polygon.182], polygon[GRID.polygon.183], polygon[GRID.polygon.184], polygon[GRID.polygon.185], text[GRID.text.186], text[GRID.text.187], text[GRID.text.188], text[GRID.text.189], text[GRID.text.190], text[GRID.text.191], text[GRID.text.192], text[GRID.text.193], text[GRID.text.194], text[GRID.text.195], text[GRID.text.196], text[GRID.text.197], text[GRID.text.198], text[GRID.text.199], text[GRID.text.200], text[GRID.text.201], text[GRID.text.202], text[GRID.text.203], text[GRID.text.204])
 ```
 
 
@@ -986,41 +1032,39 @@ sessionInfo()
 ```
 
 ```
-## R version 3.2.2 (2015-08-14)
-## Platform: x86_64-w64-mingw32/x64 (64-bit)
-## Running under: Windows 8 x64 (build 9200)
+## R version 3.2.3 (2015-12-10)
+## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Running under: OS X 10.11.2 (El Capitan)
 ## 
 ## locale:
-## [1] LC_COLLATE=Russian_Russia.1251  LC_CTYPE=Russian_Russia.1251   
-## [3] LC_MONETARY=Russian_Russia.1251 LC_NUMERIC=C                   
-## [5] LC_TIME=Russian_Russia.1251    
+## [1] ru_RU.UTF-8/ru_RU.UTF-8/ru_RU.UTF-8/C/ru_RU.UTF-8/ru_RU.UTF-8
 ## 
 ## attached base packages:
 ## [1] grid      stats     graphics  grDevices utils     datasets  methods  
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] ROCR_1.0-7        gplots_2.17.0     caret_6.0-62     
-##  [4] lattice_0.20-33   rpart.plot_1.5.3  rpart_4.1-10     
-##  [7] VennDiagram_1.6.9 reshape2_1.4.1    irr_0.84         
-## [10] lpSolve_5.6.13    ConsRank_1.0.2    rgl_0.95.1367    
-## [13] proxy_0.4-15      MASS_7.3-45       gtools_3.5.0     
-## [16] scales_0.3.0      ggplot2_1.0.1    
+##  [1] ROCR_1.0-7          gplots_2.17.0       caret_6.0-62       
+##  [4] lattice_0.20-33     rpart.plot_1.5.3    rpart_4.1-10       
+##  [7] VennDiagram_1.6.16  futile.logger_1.4.1 reshape2_1.4.1     
+## [10] irr_0.84            lpSolve_5.6.13      ConsRank_1.0.2     
+## [13] rgl_0.95.1435       proxy_0.4-15        MASS_7.3-45        
+## [16] gtools_3.5.0        scales_0.3.0        ggplot2_2.0.0      
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] Rcpp_0.12.2        highr_0.5.1        nloptr_1.0.4      
-##  [4] formatR_1.2.1      plyr_1.8.3         class_7.3-14      
-##  [7] bitops_1.0-6       iterators_1.0.8    tools_3.2.2       
-## [10] digest_0.6.8       lme4_1.1-10        evaluate_0.8      
-## [13] gtable_0.1.2       nlme_3.1-122       mgcv_1.8-9        
-## [16] Matrix_1.2-3       foreach_1.4.3      parallel_3.2.2    
-## [19] yaml_2.1.13        SparseM_1.7        proto_0.3-10      
-## [22] e1071_1.6-7        stringr_1.0.0      knitr_1.11        
-## [25] caTools_1.17.1     MatrixModels_0.4-1 stats4_3.2.2      
-## [28] nnet_7.3-11        rmarkdown_0.8.1    gdata_2.17.0      
-## [31] minqa_1.2.4        car_2.1-0          magrittr_1.5      
-## [34] codetools_0.2-14   htmltools_0.2.6    splines_3.2.2     
-## [37] pbkrtest_0.4-2     colorspace_1.2-6   labeling_0.3      
-## [40] quantreg_5.19      KernSmooth_2.23-15 stringi_1.0-1     
-## [43] munsell_0.4.2
+##  [1] splines_3.2.3        colorspace_1.2-6     htmltools_0.3       
+##  [4] stats4_3.2.3         yaml_2.1.13          mgcv_1.8-9          
+##  [7] e1071_1.6-7          nloptr_1.0.4         lambda.r_1.1.7      
+## [10] foreach_1.4.3        plyr_1.8.3           stringr_1.0.0       
+## [13] MatrixModels_0.4-1   munsell_0.4.2        gtable_0.1.2        
+## [16] caTools_1.17.1       codetools_0.2-14     evaluate_0.8        
+## [19] labeling_0.3         knitr_1.11           SparseM_1.7         
+## [22] quantreg_5.19        pbkrtest_0.4-4       parallel_3.2.3      
+## [25] class_7.3-14         highr_0.5.1          Rcpp_0.12.2         
+## [28] KernSmooth_2.23-15   formatR_1.2.1        gdata_2.17.0        
+## [31] lme4_1.1-10          digest_0.6.8         stringi_1.0-1       
+## [34] tools_3.2.3          bitops_1.0-6         magrittr_1.5        
+## [37] futile.options_1.0.0 car_2.1-1            Matrix_1.2-3        
+## [40] minqa_1.2.4          rmarkdown_0.9        iterators_1.0.8     
+## [43] nnet_7.3-11          nlme_3.1-122
 ```

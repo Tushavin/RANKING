@@ -1,4 +1,10 @@
 base
+methods
+datasets
+utils
+grDevices
+graphics
+stats
 ggplot2
 scales
 gtools
@@ -9,6 +15,8 @@ ConsRank
 lpSolve
 irr
 reshape2
+grid
+futile.logger
 VennDiagram
 rpart
 rpart.plot

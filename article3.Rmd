@@ -143,7 +143,7 @@ Schulze.m<-function(ranks,Wk=NULL) {
     for(j in 1:n_candidates)
       if(i!=j) for(k in 1:n_candidates)
         if(i!=k & j !=k) result[j,k]<-max(result[j,k],
-                                          min(result[j,i],result[i,k]))
+                                        min(result[j,i],result[i,k]))   
   vec<-rep(0,n_candidates)
   for(k in 1:nrow(z<-combinations(n_candidates,2))) {
     i=z[k,1]
@@ -158,8 +158,10 @@ Schulze.m<-function(ranks,Wk=NULL) {
   colnames(consensus)<-colnames(ranks)
 toc = proc.time()[3]
 eltime = toc - tic
-return(list(Consensus=consensus+1,Eltime=eltime))
+return(list(Consensus=consensus+1,Schulze=result,Eltime=eltime))
 }
+
+Rcpp::sourceCpp('schulze.cpp')
 ```
 
 Проведем тестирование на [примере из Википедии](https://en.wikipedia.org/wiki/Schulze_method)
@@ -218,7 +220,12 @@ FASTcons(sports,maxiter=10)
 QuickCons(sports)
 EMCons(sports)
 
+# Версия на R
 Schulze.m(sports)
+
+#Версия на C++
+Schulze_M(sports)
+
 rank_solve(sports)
 ```
 
@@ -270,7 +277,7 @@ for(rank_len in 3:8)
     d.time<-c(d.time,as.numeric(time.taken))
     
     start.time <- Sys.time()
-    z<-Schulze.m(ranks)
+    z<-Schulze_M(ranks)
     end.time <- Sys.time()
     time.taken <- end.time - start.time
     d.len<-c(d.len,rank_len)
@@ -339,7 +346,7 @@ dotest<-function(val=5,experts=10,tests=1,correct=0) {
     if(correct>0) for(j in 1:correct) z1[j,]<-x0
     result[[i]]<-list(kendall=kendall(t(z1)),
                       TrueValue=x0,
-                      Shulze=Schulze.m(z1),
+                      Shulze=Schulze_M(z1),
                       FASTcons=QuickCons(z1),
                       LP=rank_solve(z1-1))
   }
@@ -405,9 +412,13 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
-ggplot(md,aes(x=val,y=value,fill=variable))+
-  geom_bar(stat="identity",colour="black")+
-  scale_fill_discrete(name = "Алгоритм")+
+md<-aggregate(value~val+variable,sum,data=md)
+ggplot(md,aes(x=val,y=value,col=variable))+
+  geom_line(size=1)+geom_point()+
+ scale_color_discrete(name="Алгоритм")+
+  scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
+                labels=trans_format("log10",math_format(10^.x)),
+                minor_breaks=waiver())+  
   labs(x="Число параметров",y="Время, сек.")+
   theme_bw()+theme(text=element_text(size=14))
 ggsave("Pic03_00.png",width=6,height=4,dpi=300)
