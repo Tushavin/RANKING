@@ -421,7 +421,7 @@ ggplot(md,aes(x=val,y=value,col=variable))+
                 minor_breaks=waiver())+  
   labs(x="Число параметров",y="Время, сек.")+
   theme_bw()+theme(text=element_text(size=14))
-ggsave("Pic03_00.png",width=6,height=4,dpi=300)
+ggsave("Pictures/Artcl03/Pic03_00.png",width=6,height=4,dpi=300)
 ```
 
 

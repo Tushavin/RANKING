@@ -236,7 +236,7 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.86
+##    1.09
 ```
 
 ```r
@@ -253,7 +253,7 @@ QuickCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.04
+##    0.05
 ```
 
 ```r
@@ -326,7 +326,7 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.35
+##    0.31
 ```
 
 ```r
@@ -344,7 +344,7 @@ QuickCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.07
+##     0.1
 ```
 
 ```r
@@ -371,7 +371,7 @@ EMCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.07
+##    0.06
 ```
 
 ```r
@@ -396,7 +396,7 @@ Schulze.m(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.03
+##    0.01
 ```
 
 ```r
@@ -421,7 +421,7 @@ Schulze_M(sports)
 ## 
 ## $Eltime
 ##    elapsed 
-## 3.4522e-05
+## 3.2655e-05
 ```
 
 ```r
@@ -699,7 +699,7 @@ ggplot(md,aes(x=val,y=value,col=variable))+
 ![plot of chunk sc.time](figure/sc.time-1.png) 
 
 ```r
-ggsave("Pic03_00.png",width=6,height=4,dpi=300)
+ggsave("Pictures/Artcl03/Pic03_00.png",width=6,height=4,dpi=300)
 ```
 
 
@@ -733,7 +733,7 @@ plot.venn(doe)
 ![plot of chunk venn.first](figure/venn.first-1.png) 
 
 ```
-## (polygon[GRID.polygon.566], polygon[GRID.polygon.567], polygon[GRID.polygon.568], polygon[GRID.polygon.569], polygon[GRID.polygon.570], polygon[GRID.polygon.571], polygon[GRID.polygon.572], polygon[GRID.polygon.573], text[GRID.text.574], text[GRID.text.575], text[GRID.text.576], text[GRID.text.577], text[GRID.text.578], text[GRID.text.579], text[GRID.text.580], text[GRID.text.581], text[GRID.text.582], text[GRID.text.583], text[GRID.text.584], text[GRID.text.585], text[GRID.text.586], text[GRID.text.587], text[GRID.text.588], text[GRID.text.589], text[GRID.text.590], text[GRID.text.591], text[GRID.text.592])
+## (polygon[GRID.polygon.814], polygon[GRID.polygon.815], polygon[GRID.polygon.816], polygon[GRID.polygon.817], polygon[GRID.polygon.818], polygon[GRID.polygon.819], polygon[GRID.polygon.820], polygon[GRID.polygon.821], text[GRID.text.822], text[GRID.text.823], text[GRID.text.824], text[GRID.text.825], text[GRID.text.826], text[GRID.text.827], text[GRID.text.828], text[GRID.text.829], text[GRID.text.830], text[GRID.text.831], text[GRID.text.832], text[GRID.text.833], text[GRID.text.834], text[GRID.text.835], text[GRID.text.836], text[GRID.text.837], text[GRID.text.838], text[GRID.text.839], text[GRID.text.840])
 ```
 
 
@@ -963,7 +963,7 @@ plot.venn(subset(doe,val>3.5 & experts>12))
 ![plot of chunk venn.fin](figure/venn.fin-1.png) 
 
 ```
-## (polygon[GRID.polygon.593], polygon[GRID.polygon.594], polygon[GRID.polygon.595], polygon[GRID.polygon.596], polygon[GRID.polygon.597], polygon[GRID.polygon.598], polygon[GRID.polygon.599], polygon[GRID.polygon.600], text[GRID.text.601], text[GRID.text.602], text[GRID.text.603], text[GRID.text.604], text[GRID.text.605], text[GRID.text.606], text[GRID.text.607], text[GRID.text.608], text[GRID.text.609], text[GRID.text.610], text[GRID.text.611], text[GRID.text.612], text[GRID.text.613], text[GRID.text.614], text[GRID.text.615], text[GRID.text.616], text[GRID.text.617], text[GRID.text.618], text[GRID.text.619])
+## (polygon[GRID.polygon.841], polygon[GRID.polygon.842], polygon[GRID.polygon.843], polygon[GRID.polygon.844], polygon[GRID.polygon.845], polygon[GRID.polygon.846], polygon[GRID.polygon.847], polygon[GRID.polygon.848], text[GRID.text.849], text[GRID.text.850], text[GRID.text.851], text[GRID.text.852], text[GRID.text.853], text[GRID.text.854], text[GRID.text.855], text[GRID.text.856], text[GRID.text.857], text[GRID.text.858], text[GRID.text.859], text[GRID.text.860], text[GRID.text.861], text[GRID.text.862], text[GRID.text.863], text[GRID.text.864], text[GRID.text.865], text[GRID.text.866], text[GRID.text.867])
 ```
 
 
