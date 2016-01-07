@@ -26,6 +26,16 @@ plot.venn(doe)
 dev.off()
 
 png("Pic03_02.png",width = 6, height = 6,units ="in" ,res=300)
-plot.venn(subset(doe,val>3.5 & experts>11))
+plot.venn(subset(doe,val>3.5 & experts>12))
 dev.off()
 
+png("Pic03_03.png",width = 6, height = 4,units ="in" ,res=300)
+library(rpart)
+library(rpart.plot)
+set.seed(2015)
+idx<-sample(1:nrow(doe),3800)
+test<-doe[idx,]
+verify<-doe[-idx,]
+mytree <- rpart(as.factor(TrueS) ~ val + experts + W, data = test)
+prp(mytree,type = 2,extra = 104,fallen.leaves=TRUE)
+dev.off()
