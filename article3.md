@@ -267,7 +267,7 @@ Schulze.m(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.005
+##   0.003
 ```
 
 Результаты совпали полностью. Функция работает.
@@ -289,7 +289,7 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    1.31
+##   1.147
 ```
 
 ```r
@@ -306,7 +306,7 @@ QuickCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.053
+##   0.056
 ```
 
 ```r
@@ -336,7 +336,7 @@ EMCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.136
+##   0.121
 ```
 
 Имеется расхождение, поскольку пример является несбалансированным по рангам.
@@ -379,7 +379,7 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.406
+##   0.409
 ```
 
 ```r
@@ -397,7 +397,7 @@ QuickCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.106
+##   0.099
 ```
 
 ```r
@@ -424,7 +424,7 @@ EMCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.096
+##   0.085
 ```
 
 ```r
@@ -449,7 +449,7 @@ Schulze.m(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##   0.037
+##   0.035
 ```
 
 ```r
@@ -474,7 +474,7 @@ Schulze_M(sports)
 ## 
 ## $Eltime
 ##    elapsed 
-## 4.9714e-05
+## 4.7626e-05
 ```
 
 ```r
@@ -494,7 +494,7 @@ rank_solve(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.05
+##   0.065
 ```
 
 Результаты совпадают. 
@@ -1010,11 +1010,11 @@ auc
 ## [1] 0.899416
 ```
 
-Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число экспертов больше 11
+Построим такую же диаграмму для числа оцениваемых параметров больше 3.5 и число экспертов больше 12
 
 
 ```r
-plot.venn(subset(doe,val>3.5 & experts>11))
+plot.venn(subset(doe,val>3.5 & experts>12))
 ```
 
 ![](article3_files/figure-html/venn.fin-1.png) 
