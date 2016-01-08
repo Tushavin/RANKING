@@ -413,9 +413,9 @@ agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
 md<-aggregate(value~val+variable,sum,data=md)
-ggplot(md,aes(x=val,y=value,col=variable))+
+ggplot(md,aes(x=val,y=value,linetype=variable))+
   geom_line(size=1)+geom_point()+
- scale_color_discrete(name="Алгоритм")+
+ scale_linetype_discrete(name="Алгоритм")+
   scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
                 labels=trans_format("log10",math_format(10^.x)),
                 minor_breaks=waiver())+  

@@ -1,12 +1,6 @@
----
-title: "Сравнение подходов к ранжированию"
-author: "Тушавин В. А."
-date: "4 января 2016 г."
-output:
-  html_document:
-    keep_md: yes
-  word_document: default
----
+# Сравнение подходов к ранжированию
+Тушавин В. А.  
+4 января 2016 г.  
 
 Целью настоящего исследования является сравнение алгоритмов ранжирования объектов с точки зрения их эффективности.
 
@@ -22,15 +16,74 @@ library(ggplot2)
 library(scales)
 library(gtools)
 library(ConsRank)
+```
+
+```
+## Loading required package: MASS
+## Loading required package: proxy
+## 
+## Attaching package: 'proxy'
+## 
+## Следующие объекты скрыты от 'package:stats':
+## 
+##     as.dist, dist
+## 
+## Следующий объект скрыт от 'package:base':
+## 
+##     as.matrix
+## 
+## Loading required package: rgl
+## 
+## Attaching package: 'ConsRank'
+## 
+## Следующий объект скрыт от 'package:base':
+## 
+##     labels
+```
+
+```r
 library(lpSolve)
 library(irr)
 library(reshape2)
 library(VennDiagram)
+```
+
+```
+## Loading required package: grid
+## Loading required package: futile.logger
+## 
+## Attaching package: 'futile.logger'
+## 
+## Следующий объект скрыт от 'package:gtools':
+## 
+##     scat
+```
+
+```r
 library(rpart)
 library(rpart.plot)
 library(caret)
-library(ROCR)
+```
 
+```
+## Loading required package: lattice
+```
+
+```r
+library(ROCR)
+```
+
+```
+## Loading required package: gplots
+## 
+## Attaching package: 'gplots'
+## 
+## Следующий объект скрыт от 'package:stats':
+## 
+##     lowess
+```
+
+```r
 # Функции для нахождения медианы Кемени
 # Нахождение расстояния между оценками
 kendall_tau<-function(rank.a,rank.b) {
@@ -214,7 +267,7 @@ Schulze.m(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##       0
+##    0.02
 ```
 
 Результаты совпали полностью. Функция работает.
@@ -236,7 +289,7 @@ FASTcons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    1.09
+##   3.397
 ```
 
 ```r
@@ -253,7 +306,7 @@ QuickCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.05
+##   0.141
 ```
 
 ```r
@@ -283,7 +336,7 @@ EMCons(ranks,Wk)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.09
+##   0.336
 ```
 
 Имеется расхождение, поскольку пример является несбалансированным по рангам.
@@ -326,7 +379,7 @@ FASTcons(sports,maxiter=10)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.31
+##   1.087
 ```
 
 ```r
@@ -344,7 +397,7 @@ QuickCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##     0.1
+##   0.298
 ```
 
 ```r
@@ -371,7 +424,7 @@ EMCons(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.06
+##   0.237
 ```
 
 ```r
@@ -396,7 +449,7 @@ Schulze.m(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.01
+##   0.096
 ```
 
 ```r
@@ -421,7 +474,7 @@ Schulze_M(sports)
 ## 
 ## $Eltime
 ##    elapsed 
-## 3.2655e-05
+## 0.00011846
 ```
 
 ```r
@@ -441,7 +494,7 @@ rank_solve(sports)
 ## 
 ## $Eltime
 ## elapsed 
-##    0.03
+##   0.138
 ```
 
 Результаты совпадают. 
@@ -528,7 +581,11 @@ g<-g+theme_bw(base_size = 16)
 g  #+theme(legend.position=c(1,1),legend.justification=c(1,1))
 ```
 
-![plot of chunk alg.time](figure/alg.time-1.png) 
+```
+## Warning in self$trans$transform(self$minor_breaks): созданы NaN
+```
+
+![](article3_files/figure-html/alg.time-1.png) 
 
 
 
@@ -627,56 +684,56 @@ knitr::kable(agg.doe<-aggregate(cbind(TrueS,TrueF,TrueLP,SF,SLP,FLP,Shulze.time,
 
 
 
-| val| experts| TrueS| TrueF| TrueLP|  SF| SLP| FLP| Shulze.time| FASTcons.time| LP.time|
-|---:|-------:|-----:|-----:|------:|---:|---:|---:|-----------:|-------------:|-------:|
-|   3|       4|    37|    36|      0|  67|  63|  64|   0.0006134|         0.984|   0.207|
-|   4|       4|    52|    60|     37|  80|  53|  45|   0.0005918|         1.159|   0.232|
-|   5|       4|    67|    64|     52|  87|  57|  64|   0.0006976|         1.959|   0.370|
-|   6|       4|    72|    73|     63|  93|  67|  68|   0.0009001|         2.760|   0.481|
-|   7|       4|    76|    77|     68|  95|  62|  65|   0.0009591|         3.968|   0.726|
-|   8|       4|    89|    86|     79|  95|  72|  75|   0.0011465|         5.687|   1.137|
-|   3|       8|    26|    25|      0|  69|  74|  75|   0.0005847|         1.133|   0.261|
-|   4|       8|    58|    61|     40|  85|  80|  77|   0.0007142|         1.854|   0.558|
-|   5|       8|    85|    85|     79|  92|  86|  86|   0.0009325|         2.349|   0.473|
-|   6|       8|    93|    91|     87|  98|  94|  96|   0.0008912|         2.700|   0.522|
-|   7|       8|    93|    93|     92|  98|  97|  97|   0.0010195|         4.058|   0.812|
-|   8|       8|    98|    97|     95|  99|  97|  98|   0.0012233|         6.320|   1.299|
-|   3|      16|    15|    12|      0|  83|  85|  88|   0.0005927|         1.354|   0.333|
-|   4|      16|    81|    80|     74|  95|  93|  94|   0.0007365|         2.010|   0.425|
-|   5|      16|    99|    99|     98| 100|  99|  99|   0.0008739|         3.078|   0.648|
-|   6|      16|    99|   100|     99|  99| 100|  99|   0.0011506|         3.172|   0.762|
-|   7|      16|   100|   100|     99| 100|  99|  99|   0.0012624|         4.840|   1.268|
-|   8|      16|    99|   100|     99|  99| 100|  99|   0.0014079|         6.671|   1.535|
-|   3|      32|    10|    15|      0|  79|  90|  85|   0.0006798|         2.035|   0.513|
-|   4|      32|    92|    94|     91|  98|  99|  97|   0.0008034|         2.097|   0.568|
-|   5|      32|   100|   100|    100| 100| 100| 100|   0.0012943|         3.339|   0.855|
-|   6|      32|   100|   100|    100| 100| 100| 100|   0.0011967|         3.884|   1.010|
-|   7|      32|   100|   100|    100| 100| 100| 100|   0.0015900|         5.224|   1.431|
-|   8|      32|   100|   100|    100| 100| 100| 100|   0.0017272|         6.934|   1.881|
-|   3|      64|     8|    15|      0|  89|  92|  85|   0.0007975|         2.426|   0.725|
-|   4|      64|    99|    99|     99| 100| 100| 100|   0.0010219|         3.066|   0.943|
-|   5|      64|   100|   100|    100| 100| 100| 100|   0.0013611|         5.609|   1.617|
-|   6|      64|   100|   100|    100| 100| 100| 100|   0.0018985|         8.473|   2.733|
-|   7|      64|   100|   100|    100| 100| 100| 100|   0.0023558|        10.962|   3.334|
-|   8|      64|   100|   100|    100| 100| 100| 100|   0.0025999|        11.133|   3.507|
-|   3|     128|     7|    11|      0|  92|  93|  89|   0.0009624|         3.764|   1.266|
-|   4|     128|   100|   100|    100| 100| 100| 100|   0.0013170|         4.823|   1.637|
-|   5|     128|   100|   100|    100| 100| 100| 100|   0.0017028|         6.015|   2.128|
-|   6|     128|   100|   100|    100| 100| 100| 100|   0.0020554|         7.546|   2.736|
-|   7|     128|   100|   100|    100| 100| 100| 100|   0.0030943|        11.162|   4.534|
-|   8|     128|   100|   100|    100| 100| 100| 100|   0.0035546|        15.536|   5.897|
-|   3|     256|     4|     3|      0|  95|  96|  97|   0.0013534|         7.012|   2.343|
-|   4|     256|   100|   100|    100| 100| 100| 100|   0.0020334|         9.993|   3.506|
-|   5|     256|   100|   100|    100| 100| 100| 100|   0.0026432|        11.775|   4.398|
-|   6|     256|   100|   100|    100| 100| 100| 100|   0.0034648|        13.800|   5.540|
-|   7|     256|   100|   100|    100| 100| 100| 100|   0.0042200|        16.157|   6.966|
-|   8|     256|   100|   100|    100| 100| 100| 100|   0.0051927|        19.826|   8.700|
-|   3|     512|     1|     2|      0|  99|  99|  98|   0.0022246|        16.445|   5.686|
-|   4|     512|   100|   100|    100| 100| 100| 100|   0.0031334|        15.743|   6.303|
-|   5|     512|   100|   100|    100| 100| 100| 100|   0.0042382|        19.571|   7.748|
-|   6|     512|   100|   100|    100| 100| 100| 100|   0.0056990|        23.939|  10.399|
-|   7|     512|   100|   100|    100| 100| 100| 100|   0.0073756|        29.067|  12.916|
-|   8|     512|   100|   100|    100| 100| 100| 100|   0.0092957|        35.709|  16.560|
+ val   experts   TrueS   TrueF   TrueLP    SF   SLP   FLP   Shulze.time   FASTcons.time   LP.time
+----  --------  ------  ------  -------  ----  ----  ----  ------------  --------------  --------
+   3         4      37      36        0    67    63    64     0.0006134           0.984     0.207
+   4         4      52      60       37    80    53    45     0.0005918           1.159     0.232
+   5         4      67      64       52    87    57    64     0.0006976           1.959     0.370
+   6         4      72      73       63    93    67    68     0.0009001           2.760     0.481
+   7         4      76      77       68    95    62    65     0.0009591           3.968     0.726
+   8         4      89      86       79    95    72    75     0.0011465           5.687     1.137
+   3         8      26      25        0    69    74    75     0.0005847           1.133     0.261
+   4         8      58      61       40    85    80    77     0.0007142           1.854     0.558
+   5         8      85      85       79    92    86    86     0.0009325           2.349     0.473
+   6         8      93      91       87    98    94    96     0.0008912           2.700     0.522
+   7         8      93      93       92    98    97    97     0.0010195           4.058     0.812
+   8         8      98      97       95    99    97    98     0.0012233           6.320     1.299
+   3        16      15      12        0    83    85    88     0.0005927           1.354     0.333
+   4        16      81      80       74    95    93    94     0.0007365           2.010     0.425
+   5        16      99      99       98   100    99    99     0.0008739           3.078     0.648
+   6        16      99     100       99    99   100    99     0.0011506           3.172     0.762
+   7        16     100     100       99   100    99    99     0.0012624           4.840     1.268
+   8        16      99     100       99    99   100    99     0.0014079           6.671     1.535
+   3        32      10      15        0    79    90    85     0.0006798           2.035     0.513
+   4        32      92      94       91    98    99    97     0.0008034           2.097     0.568
+   5        32     100     100      100   100   100   100     0.0012943           3.339     0.855
+   6        32     100     100      100   100   100   100     0.0011967           3.884     1.010
+   7        32     100     100      100   100   100   100     0.0015900           5.224     1.431
+   8        32     100     100      100   100   100   100     0.0017272           6.934     1.881
+   3        64       8      15        0    89    92    85     0.0007975           2.426     0.725
+   4        64      99      99       99   100   100   100     0.0010219           3.066     0.943
+   5        64     100     100      100   100   100   100     0.0013611           5.609     1.617
+   6        64     100     100      100   100   100   100     0.0018985           8.473     2.733
+   7        64     100     100      100   100   100   100     0.0023558          10.962     3.334
+   8        64     100     100      100   100   100   100     0.0025999          11.133     3.507
+   3       128       7      11        0    92    93    89     0.0009624           3.764     1.266
+   4       128     100     100      100   100   100   100     0.0013170           4.823     1.637
+   5       128     100     100      100   100   100   100     0.0017028           6.015     2.128
+   6       128     100     100      100   100   100   100     0.0020554           7.546     2.736
+   7       128     100     100      100   100   100   100     0.0030943          11.162     4.534
+   8       128     100     100      100   100   100   100     0.0035546          15.536     5.897
+   3       256       4       3        0    95    96    97     0.0013534           7.012     2.343
+   4       256     100     100      100   100   100   100     0.0020334           9.993     3.506
+   5       256     100     100      100   100   100   100     0.0026432          11.775     4.398
+   6       256     100     100      100   100   100   100     0.0034648          13.800     5.540
+   7       256     100     100      100   100   100   100     0.0042200          16.157     6.966
+   8       256     100     100      100   100   100   100     0.0051927          19.826     8.700
+   3       512       1       2        0    99    99    98     0.0022246          16.445     5.686
+   4       512     100     100      100   100   100   100     0.0031334          15.743     6.303
+   5       512     100     100      100   100   100   100     0.0042382          19.571     7.748
+   6       512     100     100      100   100   100   100     0.0056990          23.939    10.399
+   7       512     100     100      100   100   100   100     0.0073756          29.067    12.916
+   8       512     100     100      100   100   100   100     0.0092957          35.709    16.560
 
 ### Время выполнения скрипта в зависимости от алгоритма
 
@@ -686,9 +743,9 @@ agg.doe<-agg.doe[,c(1,2,9:11)]
 names(agg.doe)[3:5]<-c("Шульце","Кемени","ЛП")
 md<-melt(agg.doe,id=c("val","experts"))
 md<-aggregate(value~val+variable,sum,data=md)
-ggplot(md,aes(x=val,y=value,col=variable))+
+ggplot(md,aes(x=val,y=value,linetype=variable))+
   geom_line(size=1)+geom_point()+
- scale_color_discrete(name="Алгоритм")+
+ scale_linetype_discrete(name="Алгоритм")+
   scale_y_log10(breaks=trans_breaks("log10",function(x) 10^x),
                 labels=trans_format("log10",math_format(10^.x)),
                 minor_breaks=waiver())+  
@@ -696,7 +753,7 @@ ggplot(md,aes(x=val,y=value,col=variable))+
   theme_bw()+theme(text=element_text(size=14))
 ```
 
-![plot of chunk sc.time](figure/sc.time-1.png) 
+![](article3_files/figure-html/sc.time-1.png) 
 
 ```r
 ggsave("Pictures/Artcl03/Pic03_00.png",width=6,height=4,dpi=300)
@@ -730,10 +787,10 @@ plot.venn<-function(doe) {
 plot.venn(doe)
 ```
 
-![plot of chunk venn.first](figure/venn.first-1.png) 
+![](article3_files/figure-html/venn.first-1.png) 
 
 ```
-## (polygon[GRID.polygon.814], polygon[GRID.polygon.815], polygon[GRID.polygon.816], polygon[GRID.polygon.817], polygon[GRID.polygon.818], polygon[GRID.polygon.819], polygon[GRID.polygon.820], polygon[GRID.polygon.821], text[GRID.text.822], text[GRID.text.823], text[GRID.text.824], text[GRID.text.825], text[GRID.text.826], text[GRID.text.827], text[GRID.text.828], text[GRID.text.829], text[GRID.text.830], text[GRID.text.831], text[GRID.text.832], text[GRID.text.833], text[GRID.text.834], text[GRID.text.835], text[GRID.text.836], text[GRID.text.837], text[GRID.text.838], text[GRID.text.839], text[GRID.text.840])
+## (polygon[GRID.polygon.229], polygon[GRID.polygon.230], polygon[GRID.polygon.231], polygon[GRID.polygon.232], polygon[GRID.polygon.233], polygon[GRID.polygon.234], polygon[GRID.polygon.235], polygon[GRID.polygon.236], text[GRID.text.237], text[GRID.text.238], text[GRID.text.239], text[GRID.text.240], text[GRID.text.241], text[GRID.text.242], text[GRID.text.243], text[GRID.text.244], text[GRID.text.245], text[GRID.text.246], text[GRID.text.247], text[GRID.text.248], text[GRID.text.249], text[GRID.text.250], text[GRID.text.251], text[GRID.text.252], text[GRID.text.253], text[GRID.text.254], text[GRID.text.255])
 ```
 
 
@@ -853,7 +910,7 @@ prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf,colorize=T)
 ```
 
-![plot of chunk hh](figure/hh-1.png) 
+![](article3_files/figure-html/hh-1.png) 
 
 ```r
 auc <- performance(pr, measure = "auc")
@@ -890,7 +947,7 @@ auc
 prp(mytree,type = 2,extra = 104,fallen.leaves=TRUE)
 ```
 
-![plot of chunk hh](figure/hh-2.png) 
+![](article3_files/figure-html/hh-2.png) 
 
 ```r
 fitted.results<-predict(mytree,newdata=verify,type = "class")
@@ -941,7 +998,7 @@ prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf,colorize=T)
 ```
 
-![plot of chunk hh](figure/hh-3.png) 
+![](article3_files/figure-html/hh-3.png) 
 
 ```r
 auc <- performance(pr, measure = "auc")
@@ -960,10 +1017,10 @@ auc
 plot.venn(subset(doe,val>3.5 & experts>12))
 ```
 
-![plot of chunk venn.fin](figure/venn.fin-1.png) 
+![](article3_files/figure-html/venn.fin-1.png) 
 
 ```
-## (polygon[GRID.polygon.841], polygon[GRID.polygon.842], polygon[GRID.polygon.843], polygon[GRID.polygon.844], polygon[GRID.polygon.845], polygon[GRID.polygon.846], polygon[GRID.polygon.847], polygon[GRID.polygon.848], text[GRID.text.849], text[GRID.text.850], text[GRID.text.851], text[GRID.text.852], text[GRID.text.853], text[GRID.text.854], text[GRID.text.855], text[GRID.text.856], text[GRID.text.857], text[GRID.text.858], text[GRID.text.859], text[GRID.text.860], text[GRID.text.861], text[GRID.text.862], text[GRID.text.863], text[GRID.text.864], text[GRID.text.865], text[GRID.text.866], text[GRID.text.867])
+## (polygon[GRID.polygon.256], polygon[GRID.polygon.257], polygon[GRID.polygon.258], polygon[GRID.polygon.259], polygon[GRID.polygon.260], polygon[GRID.polygon.261], polygon[GRID.polygon.262], polygon[GRID.polygon.263], text[GRID.text.264], text[GRID.text.265], text[GRID.text.266], text[GRID.text.267], text[GRID.text.268], text[GRID.text.269], text[GRID.text.270], text[GRID.text.271], text[GRID.text.272], text[GRID.text.273], text[GRID.text.274], text[GRID.text.275], text[GRID.text.276], text[GRID.text.277], text[GRID.text.278], text[GRID.text.279], text[GRID.text.280], text[GRID.text.281], text[GRID.text.282])
 ```
 
 
@@ -975,41 +1032,39 @@ sessionInfo()
 ```
 
 ```
-## R version 3.2.2 (2015-08-14)
-## Platform: x86_64-w64-mingw32/x64 (64-bit)
-## Running under: Windows 8 x64 (build 9200)
+## R version 3.2.3 (2015-12-10)
+## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Running under: OS X 10.11.2 (El Capitan)
 ## 
 ## locale:
-## [1] LC_COLLATE=Russian_Russia.1251  LC_CTYPE=Russian_Russia.1251   
-## [3] LC_MONETARY=Russian_Russia.1251 LC_NUMERIC=C                   
-## [5] LC_TIME=Russian_Russia.1251    
+## [1] ru_RU.UTF-8/ru_RU.UTF-8/ru_RU.UTF-8/C/ru_RU.UTF-8/ru_RU.UTF-8
 ## 
 ## attached base packages:
 ## [1] grid      stats     graphics  grDevices utils     datasets  methods  
 ## [8] base     
 ## 
 ## other attached packages:
-##  [1] caret_6.0-62      lattice_0.20-33   reshape2_1.4.1   
-##  [4] irr_0.84          lpSolve_5.6.13    scales_0.3.0     
-##  [7] ggplot2_1.0.1     knitr_1.11        rpart.plot_1.5.3 
-## [10] rpart_4.1-10      VennDiagram_1.6.9 ConsRank_1.0.2   
-## [13] gtools_3.5.0      rgl_0.95.1367     proxy_0.4-15     
-## [16] MASS_7.3-45       ROCR_1.0-7        gplots_2.17.0    
+##  [1] ROCR_1.0-7          gplots_2.17.0       caret_6.0-62       
+##  [4] lattice_0.20-33     rpart.plot_1.5.3    rpart_4.1-10       
+##  [7] VennDiagram_1.6.16  futile.logger_1.4.1 reshape2_1.4.1     
+## [10] irr_0.84            lpSolve_5.6.13      ConsRank_1.0.2     
+## [13] rgl_0.95.1435       proxy_0.4-15        MASS_7.3-45        
+## [16] gtools_3.5.0        scales_0.3.0        ggplot2_2.0.0      
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] splines_3.2.2      colorspace_1.2-6   htmltools_0.2.6   
-##  [4] stats4_3.2.2       yaml_2.1.13        mgcv_1.8-9        
-##  [7] e1071_1.6-7        nloptr_1.0.4       foreach_1.4.3     
-## [10] plyr_1.8.3         stringr_1.0.0      MatrixModels_0.4-1
-## [13] munsell_0.4.2      gtable_0.1.2       caTools_1.17.1    
-## [16] codetools_0.2-14   evaluate_0.8       labeling_0.3      
-## [19] SparseM_1.7        class_7.3-14       quantreg_5.19     
-## [22] pbkrtest_0.4-2     parallel_3.2.2     markdown_0.7.7    
-## [25] highr_0.5.1        proto_0.3-10       Rcpp_0.12.2       
-## [28] KernSmooth_2.23-15 formatR_1.2.1      gdata_2.17.0      
-## [31] mime_0.4           lme4_1.1-10        digest_0.6.8      
-## [34] stringi_1.0-1      tools_3.2.2        bitops_1.0-6      
-## [37] magrittr_1.5       car_2.1-0          Matrix_1.2-3      
-## [40] minqa_1.2.4        rmarkdown_0.8.1    iterators_1.0.8   
-## [43] nnet_7.3-11        nlme_3.1-122
+##  [1] splines_3.2.3        colorspace_1.2-6     htmltools_0.3       
+##  [4] stats4_3.2.3         yaml_2.1.13          mgcv_1.8-9          
+##  [7] e1071_1.6-7          nloptr_1.0.4         lambda.r_1.1.7      
+## [10] foreach_1.4.3        plyr_1.8.3           stringr_1.0.0       
+## [13] MatrixModels_0.4-1   munsell_0.4.2        gtable_0.1.2        
+## [16] caTools_1.17.1       codetools_0.2-14     evaluate_0.8        
+## [19] labeling_0.3         knitr_1.11           SparseM_1.7         
+## [22] quantreg_5.19        pbkrtest_0.4-4       parallel_3.2.3      
+## [25] class_7.3-14         highr_0.5.1          Rcpp_0.12.2         
+## [28] KernSmooth_2.23-15   formatR_1.2.1        gdata_2.17.0        
+## [31] lme4_1.1-10          digest_0.6.8         stringi_1.0-1       
+## [34] tools_3.2.3          bitops_1.0-6         magrittr_1.5        
+## [37] futile.options_1.0.0 car_2.1-1            Matrix_1.2-3        
+## [40] minqa_1.2.4          rmarkdown_0.9        iterators_1.0.8     
+## [43] nnet_7.3-11          nlme_3.1-122
 ```
