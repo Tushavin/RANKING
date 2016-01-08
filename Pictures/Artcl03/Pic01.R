@@ -1,4 +1,6 @@
 doe<-readRDS("doe.RDs")
+WD<-getwd()
+setwd("Pictures/Artcl03")
 library(VennDiagram)
 png("Pic03_01.png",width = 6, height = 6,units ="in" ,res=300)
 plot.venn<-function(doe) {
@@ -39,3 +41,5 @@ verify<-doe[-idx,]
 mytree <- rpart(as.factor(TrueS) ~ val + experts + W, data = test)
 prp(mytree,type = 2,extra = 104,fallen.leaves=TRUE)
 dev.off()
+
+setwd(WD)
